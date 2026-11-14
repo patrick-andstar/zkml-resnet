@@ -1,0 +1,26 @@
+--- zkml-main/src/layers/shape/pad.rs
++++ patches/pad_contract.rs
+@@ -78,10 +78,21 @@
+     _gadget_config: Rc<GadgetConfig>,
+     layer_config: &LayerConfig,
+   ) -> Result<Vec<AssignedTensor<F>>, Error> {
+-    // FIXME: the pad from tflite is actually two, but mine is one
+-    // assert_eq!(tensors.len(), 1);
++    // P4-A 契约（P1）：PAD/PADV2 的 paddings 与常量已经编进 layer_params，
++    // converter 契约把它们从运行时 inp_idxes 移除，因此这里必须只有 1 个数据输入。
++    // 恢复断言可以在依赖清理漏改时立即失败，而不是默默用 tensors[0]。
++    assert_eq!(
++      tensors.len(),
++      1,
++      "PadChip 只接受 1 个数据输入；paddings/常量应在 layer_params 中，\
++       若这里 >1 说明 converter 没有清理元数据依赖"
++    );
+     let input = &tensors[0];
+ 
++    // P4-A 契约（P2）：填充值**恒为 0**，不随 TFLite 常量变化。
++    // 因此 PADV2 的 -inf 常量只能通过 converter 的图级保护降级：
++    // 仅当被填充张量逐元素非负（生产者带 ReLU）且 Pad 输出唯一被 VALID MaxPool
++    // 消费时，0 填充才与 -inf 填充等价。这里不做图检查，检查在 converter 侧。
+     let zero = constants.get(&0).unwrap().clone();
+     let padding = PadChip::param_vec_to_config(layer_config.layer_params.clone());
+     let padded = pad(input, padding.padding, &zero);

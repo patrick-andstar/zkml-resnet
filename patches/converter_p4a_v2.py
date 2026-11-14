@@ -1,0 +1,977 @@
+import argparse
+import ast
+from typing import Literal, Union
+import tensorflow as tf
+import numpy as np
+import tflite
+import msgpack
+
+def get_shape(interpreter: tf.lite.Interpreter, tensor_idx):
+  if tensor_idx == -1:
+    return []
+  tensor = interpreter.get_tensor(tensor_idx)
+  return list(tensor.shape)
+
+def handle_numpy_or_literal(inp: Union[np.ndarray, Literal[0]]):
+  if isinstance(inp, int):
+    return np.array([inp])
+  return inp
+
+def get_inputs(op: tflite.Operator):
+  idxes = handle_numpy_or_literal(op.InputsAsNumpy())
+  idxes = idxes.tolist()
+  idxes = list(filter(lambda x: x != -1, idxes))
+  return idxes
+
+def round_half_away_from_zero(x):
+  """显式舍入规则：0.5 远离 0。numpy 的 .round() 是 half-to-even，不能混用。"""
+  x = np.asarray(x, dtype=np.float64)
+  return np.sign(x) * np.floor(np.abs(x) + 0.5)
+
+
+# 哪些算子把某些输入位置当作**元数据**（只用于生成 params，Rust 层运行时只读数据输入）。
+# 只登记本图实际出现的算子；新增算子必须先逐一核对对应 Layer::forward 读了哪几个 tensor。
+METADATA_INPUT_POS = {
+  'PAD':    [1],      # paddings
+  'PADV2':  [1, 2],   # paddings, constant
+  'MEAN':   [1],      # axes
+}
+
+# 带 fused activation 的算子 -> 取激活的读取器
+FUSED_ACT_OPS = {
+  'CONV_2D': ('Conv2DOptions', 'FusedActivationFunction'),
+  'DEPTHWISE_CONV_2D': ('DepthwiseConv2DOptions', 'FusedActivationFunction'),
+  'ADD': ('AddOptions', 'FusedActivationFunction'),
+  'SUB': ('SubOptions', 'FusedActivationFunction'),
+  'MUL': ('MulOptions', 'FusedActivationFunction'),
+  'FULLY_CONNECTED': ('FullyConnectedOptions', 'FusedActivationFunction'),
+}
+
+# 允许 i64 表示的上界（数值契约用，与 model.rs 的 FIELD_ENC_HI 分开）
+I64_MAX = (1 << 63) - 1
+I32_MIN = -(1 << 31)
+I32_MAX = (1 << 31) - 1
+
+# 主动保守策略开关：把定点值限制在 i32 内。原 loader 的编码在
+# [-2^31, i64::MAX-2^31] 上都是精确的，所以这不是必要条件，是策略选择。
+I32_POLICY = True
+
+class Converter:
+  def __init__(
+      self, model_path, scale_factor, k, num_cols, num_randoms, use_selectors, commit,
+      expose_output
+    ):
+    self.model_path = model_path
+    self.scale_factor = scale_factor
+    self.k = k
+    self.num_cols = num_cols
+    self.num_randoms = num_randoms
+    self.use_selectors = use_selectors
+    self.commit = commit
+    self.expose_output = expose_output
+
+    self.interpreter = tf.lite.Interpreter(
+      model_path=self.model_path,
+      experimental_preserve_all_tensors=True
+    )
+    self.interpreter.allocate_tensors()
+
+    with open(self.model_path, 'rb') as f:
+      buf = f.read()
+      self.model = tflite.Model.GetRootAsModel(buf, 0)
+    self.graph = self.model.Subgraphs(0)
+    self._build_graph_maps()
+    # P4-A v2：证据与子图状态统一挂在实例上（v1 的 to_dict 用了局部列表，
+    # 导致 to_msgpack 导出的 self.padv2_evidence 永远为空）
+    self.padv2_evidence = []
+    self.padv2_evidence_out = None
+    self.shared_metadata = {}
+    self._layer_op_idxes = []
+    self._padv2_seen = 0
+    self._range = (0, 1 << 30)
+
+
+  def valid_activations(self):
+    return [
+      tflite.ActivationFunctionType.NONE,
+      tflite.ActivationFunctionType.RELU,
+      tflite.ActivationFunctionType.RELU6,
+    ]
+
+  def _convert_add(self, op: tflite.Operator, generated_tensors: set):
+    # Get params
+    op_opt = op.BuiltinOptions()
+    if op_opt is None:
+      raise RuntimeError('Add options is None')
+    opt = tflite.AddOptions()
+    opt.Init(op_opt.Bytes, op_opt.Pos)
+    params = [opt.FusedActivationFunction()]
+
+    # Get inputs
+    inputs = get_inputs(op)
+    print(generated_tensors)
+    print('Add inputs: ', inputs)
+    if len(inputs) != 2:
+      raise RuntimeError('Add must have 2 inputs')
+
+    # If both tensors are generated, do nothing
+    print(inputs[0] in generated_tensors, inputs[1] in generated_tensors)
+    if (inputs[0] in generated_tensors) and (inputs[1] in generated_tensors):
+      return ('Add', params)
+
+    nb_generated = (inputs[0] in generated_tensors) + (inputs[1] in generated_tensors)
+    if nb_generated != 1:
+      raise RuntimeError('Add must have 1 generated tensor')
+
+    # Check if there are any negative infinities
+    const_tensor = self.interpreter.get_tensor(inputs[0]) if inputs[0] not in generated_tensors else self.interpreter.get_tensor(inputs[1])
+    if np.any(const_tensor == -np.inf):
+      # Ensure that the constant tensor is all -inf and 0
+      if not np.all(np.logical_or(np.isneginf(const_tensor), const_tensor == 0)):
+        raise RuntimeError('Add constant tensor must be -inf and 0 only')
+      mask = (const_tensor == -np.inf).astype(np.int64)
+      params = [len(mask.shape)] + list(mask.shape)
+      params += mask.flatten().tolist()
+      return ('MaskNegInf', params)
+    else:
+      return ('Add', params)
+
+
+
+  # ------------------------------------------------------------------ P4-A v2
+  def _build_graph_maps(self):
+    """按 tensor ID 建 producer / consumers 索引。不依赖算子列表顺序。"""
+    graph = self.graph
+    self.producer = {}
+    self.consumers = {}
+    self.op_codes = []
+    for op_idx in range(graph.OperatorsLength()):
+      op = graph.Operators(op_idx)
+      code = self.model.OperatorCodes(op.OpcodeIndex())
+      bcode = code.BuiltinCode()
+      if bcode == 0:
+        bcode = code.DeprecatedBuiltinCode()
+      self.op_codes.append(bcode)
+      for i in range(op.InputsLength()):
+        t = op.Inputs(i)
+        if t is None or t < 0:
+          continue
+        self.consumers.setdefault(t, []).append((op_idx, i))
+      for i in range(op.OutputsLength()):
+        t = op.Outputs(i)
+        if t is None or t < 0:
+          continue
+        self.producer[t] = op_idx
+
+  def _op_name(self, op_idx):
+    code = self.op_codes[op_idx]
+    for attr in dir(tflite.BuiltinOperator):
+      if not attr.startswith('__') and getattr(tflite.BuiltinOperator, attr) == code:
+        return attr
+    return 'OP_%d' % code
+
+  def _option(self, op, cls):
+    o = op.BuiltinOptions()
+    if o is None:
+      return None
+    v = cls()
+    v.Init(o.Bytes, o.Pos)
+    return v
+
+  def _fused_activation(self, op_idx):
+    """返回该算子的 fused activation 名；无此概念返回 None。"""
+    name = self._op_name(op_idx)
+    if name not in FUSED_ACT_OPS:
+      return None
+    cls_name, getter = FUSED_ACT_OPS[name]
+    op = self.graph.Operators(op_idx)
+    o = self._option(op, getattr(tflite, cls_name))
+    if o is None:
+      return None
+    val = getattr(o, getter)()
+    for attr in dir(tflite.ActivationFunctionType):
+      if not attr.startswith('__') and getattr(tflite.ActivationFunctionType, attr) == val:
+        return attr
+    return 'ACT_%d' % val
+
+  def _static_constant(self, tensor_idx, what):
+    """确认该 tensor 是编译期常量并返回其值。
+
+    [阻断4] 不能把运行时算出来的值（零输入 invoke 的结果）冻结进 params：
+    有 producer 的 tensor 是数据流上的中间结果，它的值取决于输入，把它当
+    paddings/constant 写进 params 会把一条图依赖伪装成常量。
+    """
+    tid = int(tensor_idx)
+    prod = self.producer.get(tid)
+    if prod is not None:
+      raise RuntimeError(
+        '%s 的 tensor %d 由 op%d 产生，是运行时计算值，不能冻结进 params'
+        % (what, tid, prod))
+    tensor = self.graph.Tensors(tid)
+    if tensor is None:
+      raise RuntimeError('%s 的 tensor %d 不存在' % (what, tid))
+    bidx = tensor.Buffer()
+    if bidx == 0:
+      raise RuntimeError('%s 的 tensor %d 没有常量 buffer（Buffer()==0）' % (what, tid))
+    buf = self.model.Buffers(bidx)
+    if buf is None or buf.DataLength() == 0:
+      raise RuntimeError('%s 的 tensor %d 的常量 buffer 为空' % (what, tid))
+    return np.asarray(self.interpreter.get_tensor(tid))
+
+  def _metadata_tensor_idxes(self, op, op_name):
+    """该算子的哪些输入位置是元数据（只喂 params），可从**本层**运行时依赖里去掉。
+
+    [阻断4] 按引用位置清理：只从这一层的 inp_idxes 里去掉，不要求"全部消费者
+    都只把它当元数据"。若别的算子把它当数据用，它会因为那个算子的 inp_idxes
+    仍然进入 keep_tensors，从而继续被保留、继续被 commit —— 不会误删共享常量。
+    """
+    positions = METADATA_INPUT_POS.get(op_name)
+    if not positions:
+      return set()
+    out = set()
+    for pos in positions:
+      if pos >= op.InputsLength():
+        continue
+      t = op.Inputs(pos)
+      if t is None or t < 0:
+        continue
+      out.add(int(t))
+      shared = [(c_op, c_pos) for (c_op, c_pos) in self.consumers.get(int(t), [])
+                if c_pos not in METADATA_INPUT_POS.get(self._op_name(c_op), [])]
+      if shared:
+        # 记录而非拒绝：这些引用会让该 tensor 留在 keep_tensors 里
+        self.shared_metadata.setdefault(int(t), []).extend(
+          ['%s@%d' % (self._op_name(c_op), c_pos) for (c_op, c_pos) in shared])
+    return out
+
+  def _convert_padv2(self, op, op_idx):
+    """PADV2 -> Pad 的图级保护（P0/P1/P1b/P2/P5）。
+
+    P3/P4 依赖"这段转换实际覆盖哪些层"，只能在整个 [start_layer, end_layer]
+    走完之后判定，见 _validate_padv2_subgraph。
+    """
+    if op.InputsLength() != 3:
+      raise RuntimeError('PADV2(op%d) 期望 3 个输入，实际 %d' % (op_idx, op.InputsLength()))
+    data_t, pad_t, const_t = op.Inputs(0), op.Inputs(1), op.Inputs(2)
+    for nm, t in (('data', data_t), ('paddings', pad_t), ('constant', const_t)):
+      if t is None or t < 0:
+        raise RuntimeError('PADV2(op%d) 的 %s 输入缺失（%r）' % (op_idx, nm, t))
+
+    # P1b paddings 必须是静态常量、rank=2 且形状 [4,2]、非负整数、batch/channel 轴为 0
+    paddings_arr = self._static_constant(pad_t, 'PADV2(op%d).paddings' % op_idx)
+    if paddings_arr.ndim != 2 or paddings_arr.shape != (4, 2):
+      raise RuntimeError('PADV2(op%d) paddings 必须是 [4,2]，实际 %s'
+                         % (op_idx, paddings_arr.shape))
+    if not np.issubdtype(paddings_arr.dtype, np.integer):
+      raise RuntimeError('PADV2(op%d) paddings 必须是整数，实际 dtype=%s'
+                         % (op_idx, paddings_arr.dtype))
+    paddings = [int(v) for v in paddings_arr.reshape(-1)]
+    if any(v < 0 for v in paddings):
+      raise RuntimeError('PADV2(op%d) paddings 含负值 %r（负填充=裁剪，未覆盖）'
+                         % (op_idx, paddings))
+    if paddings[0] or paddings[1] or paddings[6] or paddings[7]:
+      raise RuntimeError('PADV2(op%d) 在 batch/channel 轴上有填充 %r，未覆盖'
+                         % (op_idx, paddings))
+
+    # P1 常量必须是静态常量、单元素、且为 -inf 或 0
+    const_arr = self._static_constant(const_t, 'PADV2(op%d).constant' % op_idx)
+    if const_arr.size != 1:
+      raise RuntimeError('PADV2(op%d) 常量不是单元素: shape=%s'
+                         % (op_idx, const_arr.shape))
+    c = float(const_arr.reshape(-1)[0])
+    if not (np.isneginf(c) or c == 0.0):
+      raise RuntimeError('PADV2(op%d) 常量只支持 -inf 或 0，实际 %r' % (op_idx, c))
+    is_neginf = bool(np.isneginf(c))
+
+    ev = {
+      'op_idx': int(op_idx),
+      'op_name': 'PADV2',
+      'data_tensor': int(data_t),
+      'paddings_tensor': int(pad_t),
+      'constant_tensor': int(const_t),
+      'constant': ('-inf' if is_neginf else 0.0),
+      'constant_is_neg_inf': is_neginf,
+      'paddings': paddings,
+      'subgraph_range': list(self._range),
+    }
+
+    # P2 -inf 时要求生产者带 ReLU，且生产者本身必须落在子图内
+    prod = self.producer.get(int(data_t))
+    if prod is None:
+      if is_neginf:
+        raise RuntimeError('PADV2(op%d) 数据输入 %d 没有生产者（是模型输入），'
+                           '-inf 填充无法降级为 0' % (op_idx, data_t))
+      ev['producer_op_idx'] = None
+      ev['producer'] = 'MODEL_INPUT'
+      ev['producer_act'] = None
+    else:
+      act = self._fused_activation(prod)
+      ev['producer_op_idx'] = int(prod)
+      ev['producer'] = self._op_name(prod)
+      ev['producer_act'] = act
+      if is_neginf and act != 'RELU':
+        raise RuntimeError(
+          'PADV2(op%d) 常量为 -inf 但生产者 op%d(%s) 的 fused activation 是 %r 而非 RELU；'
+          'Rust PadChip 只能填 0，此处会改变语义，拒绝转换'
+          % (op_idx, prod, self._op_name(prod), act))
+      if is_neginf and prod < self._range[0]:
+        raise RuntimeError(
+          'PADV2(op%d) 常量为 -inf，但其 ReLU 生产者 op%d 在 start_layer=%d 之外；'
+          '导出的子图没有这段非负保证，拒绝降级'
+          % (op_idx, prod, self._range[0]))
+
+    # P5 窗口几何：正核/stride、对称填充、每侧 < 核、shape 链条自洽
+    out_t = op.Outputs(0)
+    cons = self.consumers.get(int(out_t), [])
+    if len(cons) != 1:
+      raise RuntimeError('PADV2(op%d) 输出 %d 有 %d 个消费者，要求恰好 1 个 MaxPool'
+                         % (op_idx, out_t, len(cons)))
+    c_op, _c_pos = cons[0]
+    c_name = self._op_name(c_op)
+    if c_name != 'MAX_POOL_2D':
+      raise RuntimeError('PADV2(op%d) 输出的消费者是 %s，不是 MAX_POOL_2D'
+                         % (op_idx, c_name))
+    pool = self.graph.Operators(c_op)
+    pool_opt = self._option(pool, tflite.Pool2DOptions)
+    if pool_opt is None:
+      raise RuntimeError('MaxPool(op%d) options is None' % c_op)
+    if pool_opt.Padding() != tflite.Padding.VALID:
+      raise RuntimeError('MaxPool(op%d) 是 SAME，本契约只覆盖显式 PAD + VALID' % c_op)
+    if pool_opt.FusedActivationFunction() != tflite.ActivationFunctionType.NONE:
+      raise RuntimeError('MaxPool(op%d) 带 fused activation，未覆盖' % c_op)
+
+    fh, fw = pool_opt.FilterHeight(), pool_opt.FilterWidth()
+    sh, sw = pool_opt.StrideH(), pool_opt.StrideW()
+    if fh <= 0 or fw <= 0 or sh <= 0 or sw <= 0:
+      raise RuntimeError('MaxPool(op%d) 的核/stride 非正: kernel=(%d,%d) stride=(%d,%d)'
+                         % (c_op, fh, fw, sh, sw))
+
+    ph0, ph1 = paddings[2], paddings[3]
+    pw0, pw1 = paddings[4], paddings[5]
+    if ph0 != ph1 or pw0 != pw1:
+      raise RuntimeError('PADV2(op%d) 填充不对称 %r，PyTorch pad 是对称的'
+                         % (op_idx, paddings))
+    if ph0 >= fh or pw0 >= fw:
+      raise RuntimeError('PADV2(op%d) 填充量 (%d,%d) >= 核 (%d,%d)，存在整窗都是填充的窗口'
+                         % (op_idx, ph0, pw0, fh, fw))
+
+    in_shape = get_shape(self.interpreter, data_t)
+    pad_shape = get_shape(self.interpreter, out_t)
+    pool_out_shape = get_shape(self.interpreter, pool.Outputs(0))
+    if len(in_shape) != 4 or len(pad_shape) != 4 or len(pool_out_shape) != 4:
+      raise RuntimeError('PADV2(op%d) 只覆盖 rank-4 张量: in=%s pad=%s pool=%s'
+                         % (op_idx, in_shape, pad_shape, pool_out_shape))
+    # 轴顺序按 NHWC 解释：paddings 的 4 组依次是 batch/H/W/C。
+    # 轴顺序若错，下面的 shape 等式会对不上，因此这一条同时兜底轴顺序。
+    expect_pad = [in_shape[0] + paddings[0] + paddings[1],
+                  in_shape[1] + ph0 + ph1,
+                  in_shape[2] + pw0 + pw1,
+                  in_shape[3] + paddings[6] + paddings[7]]
+    if list(pad_shape) != expect_pad:
+      raise RuntimeError('PADV2(op%d) 输出形状 %s 与 in=%s + paddings=%r 不符（轴顺序应为 NHWC）'
+                         % (op_idx, pad_shape, in_shape, paddings))
+    expect_pool = [pad_shape[0],
+                   (pad_shape[1] - fh) // sh + 1,
+                   (pad_shape[2] - fw) // sw + 1,
+                   pad_shape[3]]
+    if list(pool_out_shape) != expect_pool:
+      raise RuntimeError('MaxPool(op%d) 输出形状 %s 与 VALID 公式 %s 不符'
+                         % (c_op, pool_out_shape, expect_pool))
+    ev['in_shape'] = list(in_shape)
+    ev['pad_shape'] = list(pad_shape)
+    ev['pool_out_shape'] = list(pool_out_shape)
+    ev['filter'] = [fh, fw]
+    ev['stride'] = [sh, sw]
+    ev['pad_h'] = [ph0, ph1]
+    ev['pad_w'] = [pw0, pw1]
+    ev['pad_out_tensor'] = int(out_t)
+    ev['consumer_op_idx'] = int(c_op)
+    ev['consumer'] = c_name
+
+    self._padv2_seen += 1
+    self.padv2_evidence.append(ev)
+    return ('Pad', paddings)
+
+  def _validate_padv2_subgraph(self, layers, start_layer, end_layer):
+    """[阻断4] P3/P4 只能对**实际导出子图**判定。
+
+    layers 只包含 [start_layer, end_layer] 内的算子；导出模型的公开输出是
+    layers[-1]['out_idxes']（expose_output 时），不是整图的 graph.Outputs。
+    因此"Pad 输出被别的东西观察"和"Pad 输出成为公开输出"都必须按子图重算。
+    """
+    if self._padv2_seen != len(self.padv2_evidence):
+      raise RuntimeError('PADV2 计数不一致：见到 %d 个，证据 %d 条'
+                         % (self._padv2_seen, len(self.padv2_evidence)))
+    if self._padv2_seen and not self.padv2_evidence:
+      raise RuntimeError('图中有 %d 个 PADV2，但证据为空' % self._padv2_seen)
+    if not self.padv2_evidence:
+      return
+    in_range = set(self._layer_op_idxes)
+    public = set()
+    if self.expose_output and layers:
+      public = {int(x) for x in layers[-1]['out_idxes']}
+    for ev in self.padv2_evidence:
+      out_t = ev['pad_out_tensor']
+      if out_t in public:
+        raise RuntimeError(
+          'PADV2(op%d) 的输出 tensor %d 是导出子图的公开输出（end_layer=%d），拒绝降级'
+          % (ev['op_idx'], out_t, end_layer))
+      cons = [c for c in self.consumers.get(out_t, []) if c[0] in in_range]
+      if len(cons) != 1:
+        raise RuntimeError(
+          'PADV2(op%d) 的输出 tensor %d 在子图 [%d,%d] 内有 %d 个消费者，要求恰好 1 个 MaxPool'
+          % (ev['op_idx'], out_t, start_layer, end_layer, len(cons)))
+      c_op, _c_pos = cons[0]
+      if c_op != ev['consumer_op_idx']:
+        raise RuntimeError('PADV2(op%d) 子图内消费者 op%d 与转换时记录的 op%d 不一致'
+                           % (ev['op_idx'], c_op, ev['consumer_op_idx']))
+      ev['n_consumers_in_subgraph'] = 1
+      ev['consumer_op_in_subgraph'] = int(c_op)
+      ev['is_subgraph_public_output'] = False
+      ev['checked_against'] = 'exported_subgraph'
+  def _quantize_checked(self, arr, tensor_idx, already_scaled=False):
+    """写 msgpack 前的数值契约检查 + 显式舍入。
+
+    两层检查分开写，避免把"主动保守策略"说成"原编码的必要条件"：
+      L1 硬边界：值必须能用原 to_field 的偏置编码精确表示，即
+         x in [-2^31, i64::MAX - 2^31]；x < -2^31 会被 as u64 回绕成 x+2^64，
+         x > i64::MAX-2^31 则在 x + 2^31 处溢出 i64。
+      L2 主动策略：进一步限制到 i32（I32_POLICY=True），因为下游 bias/累加/
+         shift 的宿主算术没有逐项复核。这是**本项目的保守选择**，
+         不是原 loader 的唯一有效域（原 loader 在 L1 全域精确）。
+
+    比较一律在**整数域**做：float64 在 2^53 以上已不能精确表示每个整数，
+    直接拿 float 跟 2^63 比会差几百到几千，边界判断就不可靠了。
+    """
+    a = np.asarray(arr, dtype=np.float64)
+    if a.size == 0:
+      return np.zeros(a.shape, dtype=np.int64)
+    if not np.all(np.isfinite(a)):
+      bad = int(np.size(a) - np.count_nonzero(np.isfinite(a)))
+      raise RuntimeError('tensor %d 含 %d 个非有限值，拒绝写入 msgpack'
+                         '(原实现会把它变成 INT64_MIN)' % (tensor_idx, bad))
+    scaled = a if already_scaled else a * float(self.scale_factor)
+    if not np.all(np.isfinite(scaled)):
+      raise RuntimeError('tensor %d 乘 scale 后溢出 float64，拒绝' % tensor_idx)
+    rounded = round_half_away_from_zero(scaled)
+    # float64 只能精确表示到 2^53；超过就没有"整数"可谈，先拒绝
+    if float(np.max(np.abs(rounded))) > float(1 << 53):
+      raise RuntimeError('tensor %d 乘 scale 后绝对值超过 2^53，float64 已不能精确表示整数'
+                         % tensor_idx)
+    q = rounded.astype(np.int64)
+    mx, mn = int(q.max()), int(q.min())
+    if mn < I32_MIN or mx > (I64_MAX - (1 << 31)):
+      raise RuntimeError(
+        'tensor %d 乘 scale 后范围 [%d, %d] 超出原编码精确域 [2^31 负下界, i64::MAX-2^31]'
+        % (tensor_idx, mn, mx))
+    if I32_POLICY and (mn < I32_MIN or mx > I32_MAX):
+      raise RuntimeError(
+        'tensor %d 乘 scale 后范围 [%d, %d] 超出主动 i32 策略 [%d, %d]；'
+        '这是保守选择，可通过 I32_POLICY=False 关闭后按 i64 全域处理'
+        % (tensor_idx, mn, mx, I32_MIN, I32_MAX))
+    return q
+
+  def to_dict(self, start_layer, end_layer):
+    interpreter = self.interpreter
+    model = self.model
+    graph = self.graph
+    if graph is None:
+      raise RuntimeError('Graph is None')
+
+    input_details = interpreter.get_input_details()
+    output_details = interpreter.get_output_details()
+
+    for inp_detail in input_details:
+      inp = np.zeros(inp_detail['shape'], dtype=inp_detail['dtype'])
+      interpreter.set_tensor(inp_detail['index'], inp)
+    # for i, inp in enumerate(inps):
+    #   interpreter.set_tensor(input_details[i]['index'], inp)
+    interpreter.invoke()
+
+    # Get layers
+    generated_tensor_idxes = set()
+    for inp in input_details:
+      generated_tensor_idxes.add(inp['index'])
+
+    layers = []
+    keep_tensors = set()
+    # P4-A v2：每次调用重置，避免复用实例时证据串场
+    self.padv2_evidence = []
+    self.shared_metadata = {}
+    self._layer_op_idxes = []
+    self._padv2_seen = 0
+    self._range = (start_layer, end_layer)
+    adjusted_tensors = {}
+    for op_idx in range(graph.OperatorsLength()):
+      op = graph.Operators(op_idx)
+      if op is None:
+        raise RuntimeError('Operator is None')
+      model_opcode = model.OperatorCodes(op.OpcodeIndex())
+      if model_opcode is None:
+        raise RuntimeError('Operator code is None')
+      op_code = model_opcode.BuiltinCode()
+
+      # Skip generated tensors
+      for output in handle_numpy_or_literal(op.OutputsAsNumpy()):
+        generated_tensor_idxes.add(output)
+
+      if op_idx < start_layer:
+        continue
+      if op_idx > end_layer:
+        break
+
+      # P4-A：不再无条件保留全部输入。元数据张量（paddings / 常量 / axes）
+      # 在算出 inp_idxes 之后再按数据依赖决定是否保留，见下面的 E4。
+
+      # AvgPool2D
+      if op_code == tflite.BuiltinOperator.AVERAGE_POOL_2D:
+        layer_type = 'AveragePool2D'
+        op_opt = op.BuiltinOptions()
+        if op_opt is None:
+          raise RuntimeError('AvgPool2D options is None')
+        opt = tflite.Pool2DOptions()
+        opt.Init(op_opt.Bytes, op_opt.Pos)
+        params = [opt.FilterHeight(), opt.FilterWidth(), opt.StrideH(), opt.StrideW()]
+      elif op_code == tflite.BuiltinOperator.MAX_POOL_2D:
+        layer_type = 'MaxPool2D'
+        op_opt = op.BuiltinOptions()
+        if op_opt is None:
+          raise RuntimeError('MaxPool2D options is None')
+        opt = tflite.Pool2DOptions()
+        opt.Init(op_opt.Bytes, op_opt.Pos)
+        if opt.Padding() == tflite.Padding.SAME:
+          raise NotImplementedError('SAME padding is not supported')
+        if opt.FusedActivationFunction() != tflite.ActivationFunctionType.NONE:
+          raise NotImplementedError('Fused activation is not supported')
+        params = [opt.FilterHeight(), opt.FilterWidth(), opt.StrideH(), opt.StrideW()]
+      # FIXME: hack for Keras... not sure why this isn't being converted properly
+      elif op_code == tflite.BuiltinOperator.CUSTOM:
+        layer_type = 'Conv2D'
+        activation = 0
+        weights = self.interpreter.get_tensor(op.Inputs(1))
+        weights = np.transpose(weights, (3, 0, 1, 2))
+        weights = self._quantize_checked(weights * self.scale_factor, op.Inputs(1),
+                                        already_scaled=True)
+        adjusted_tensors[op.Inputs(1)] = weights
+        params = [0, 1, activation, 1, 1]
+      # Conv2D
+      elif op_code == tflite.BuiltinOperator.CONV_2D:
+        layer_type = 'Conv2D'
+        op_opt = op.BuiltinOptions()
+        if op_opt is None:
+          raise RuntimeError('Conv2D options is None')
+        opt = tflite.Conv2DOptions()
+        opt.Init(op_opt.Bytes, op_opt.Pos)
+        if opt.DilationHFactor() != 1 or opt.DilationWFactor() != 1:
+          raise NotImplementedError('Dilation is not supported')
+        if opt.FusedActivationFunction() not in self.valid_activations():
+          raise NotImplementedError('Unsupported activation function at layer {op_idx}')
+        # 0 is Conv2D
+        params = \
+          [0] + \
+          [opt.Padding()] + \
+          [opt.FusedActivationFunction()] + \
+          [opt.StrideH(), opt.StrideW()]
+      # DepthwiseConv2D
+      elif op_code == tflite.BuiltinOperator.DEPTHWISE_CONV_2D:
+        layer_type = 'Conv2D'
+        op_opt = op.BuiltinOptions()
+        if op_opt is None:
+          raise RuntimeError('DepthwiseConv2D options is None')
+        opt = tflite.DepthwiseConv2DOptions()
+        opt.Init(op_opt.Bytes, op_opt.Pos)
+        if opt.DilationHFactor() != 1 or opt.DilationWFactor() != 1:
+          raise NotImplementedError('Dilation is not supported')
+        if opt.FusedActivationFunction() not in self.valid_activations():
+          raise NotImplementedError('Unsupported activation function at layer {op_idx}')
+        # 1 is DepthwiseConv2D
+        params = \
+          [1] + \
+          [opt.Padding()] + \
+          [opt.FusedActivationFunction()] + \
+          [opt.StrideH(), opt.StrideW()]
+      # Fully connected
+      elif op_code == tflite.BuiltinOperator.FULLY_CONNECTED:
+        layer_type = 'FullyConnected'
+        op_opt = op.BuiltinOptions()
+        if op_opt is None:
+          raise RuntimeError('Fully connected options is None')
+        opt = tflite.FullyConnectedOptions()
+        opt.Init(op_opt.Bytes, op_opt.Pos)
+        if opt.FusedActivationFunction() not in self.valid_activations():
+          raise NotImplementedError(f'Unsupported activation function at layer {op_idx}')
+        params = [opt.FusedActivationFunction()]
+      elif op_code == tflite.BuiltinOperator.BATCH_MATMUL:
+        layer_type = 'BatchMatMul'
+        op_opt = op.BuiltinOptions()
+        if op_opt is None:
+          raise RuntimeError('BatchMatMul options is None')
+        opt = tflite.BatchMatMulOptions()
+        opt.Init(op_opt.Bytes, op_opt.Pos)
+        if opt.AdjX() is True: raise NotImplementedError('AdjX is not supported')
+        params = [int(opt.AdjX()), int(opt.AdjY())]
+
+      ## Arithmetic
+      # Add
+      elif op_code == tflite.BuiltinOperator.ADD:
+        layer_type, params = self._convert_add(op, generated_tensor_idxes)
+      # Mul
+      elif op_code == tflite.BuiltinOperator.MUL:
+        layer_type = 'Mul'
+        params = []
+      # Sub
+      elif op_code == tflite.BuiltinOperator.SUB:
+        sub_val = interpreter.get_tensor(op.Inputs(1))
+        # TODO: this is a bit of a hack
+        if np.any(np.isin(sub_val, 10000)):
+          layer_type = 'MaskNegInf'
+          mask = (sub_val == 10000).astype(np.int64)
+          params = [len(mask.shape)] + list(mask.shape)
+          params += mask.flatten().tolist()
+        else:
+          layer_type = 'Sub'
+          params = []
+      # Div
+      elif op_code == tflite.BuiltinOperator.DIV:
+        # Implement division as multiplication by the inverse
+        layer_type = 'Mul'
+        div_val = interpreter.get_tensor(op.Inputs(1))
+        if type(div_val) != np.float32: raise NotImplementedError('Only support one divisor')
+        adjusted_tensors[op.Inputs(1)] = self._quantize_checked(
+          np.asarray([self.scale_factor / div_val]), op.Inputs(1), already_scaled=True)
+        params = []
+      # Pad
+      elif op_code == tflite.BuiltinOperator.PADV2:
+        layer_type, params = self._convert_padv2(op, op_idx)
+      elif op_code == tflite.BuiltinOperator.PAD:
+        layer_type = 'Pad'
+        tensor_idx = op.Inputs(1)
+        tensor = interpreter.get_tensor(tensor_idx).flatten().astype(np.int64)
+        params = tensor.tolist()
+      # Softmax
+      elif op_code == tflite.BuiltinOperator.SOFTMAX:
+        layer_type = 'Softmax'
+        # TODO: conditionally determine whether or not to subtract the max
+        # It should depend on the input to the softmax
+        if layers[-1]['layer_type'] == 'MaskNegInf':
+          params = layers[-1]['params']
+        elif layers[-2]['layer_type'] == 'MaskNegInf':
+          params = layers[-2]['params']
+          params = [params[0] - 1] + params[2:]
+        else:
+          params = []
+      # Mean
+      elif op_code == tflite.BuiltinOperator.MEAN:
+        layer_type = 'Mean'
+        inp_shape = interpreter.get_tensor(op.Inputs(0)).shape
+        mean_idxes = interpreter.get_tensor(op.Inputs(1)).flatten().astype(np.int64)
+        if len(mean_idxes) + 2 != len(inp_shape):
+          raise NotImplementedError(f'Only mean over all but one axis is supported: {op_idx}')
+        params = mean_idxes.tolist()
+      elif op_code == tflite.BuiltinOperator.SQUARE:
+        layer_type = 'Square'
+        params = []
+      # Squared difference
+      elif op_code == tflite.BuiltinOperator.SQUARED_DIFFERENCE:
+        layer_type = 'SquaredDifference'
+        params = []
+
+      # Pointwise
+      elif op_code == tflite.BuiltinOperator.RSQRT:
+        layer_type = 'Rsqrt'
+        params = []
+      elif op_code == tflite.BuiltinOperator.LOGISTIC:
+        layer_type = 'Logistic'
+        params = []
+      elif op_code == tflite.BuiltinOperator.TANH:
+        layer_type = 'Tanh'
+        params = []
+      elif op_code == tflite.BuiltinOperator.POW:
+        layer_type = 'Pow'
+        power = interpreter.get_tensor(op.Inputs(1)).flatten().astype(np.float32)
+        if power != 3.: raise NotImplementedError(f'Only support power 3')
+        power = power.round().astype(np.int64)
+        if len(power) != 1: raise NotImplementedError(f'Only scalar power is supported: {op_idx}')
+        params = power.tolist()
+
+      # The following are no-ops in the sense that they don't change the tensor
+      # However, we need to pass along the right tensors
+      # The param says which input to pass along
+      elif op_code == tflite.BuiltinOperator.SHAPE:
+        layer_type = 'Noop'
+        params = [0]
+      elif op_code == tflite.BuiltinOperator.GATHER:
+        layer_type = 'Noop'
+        params = [0]
+      elif op_code == tflite.BuiltinOperator.REDUCE_PROD:
+        # TODO: not sure if this is in general a no-op
+        layer_type = 'Noop'
+        params = [0]
+      elif op_code == tflite.BuiltinOperator.STRIDED_SLICE:
+        # FIXME: this is not in general a no-op
+        layer_type = 'Noop'
+        params = [0]
+      elif op_code == tflite.BuiltinOperator.BROADCAST_ARGS:
+        layer_type = 'Noop'
+        params = [0]
+      elif op_code == tflite.BuiltinOperator.BROADCAST_TO:
+        layer_type = 'Noop'
+        params = [0]
+
+      ## Shape
+      elif op_code == tflite.BuiltinOperator.RESHAPE:
+        layer_type = 'Reshape'
+        params = []
+      elif op_code == tflite.BuiltinOperator.TRANSPOSE:
+        layer_type = 'Transpose'
+        params = get_shape(interpreter, op.Inputs(0)) + interpreter.get_tensor(op.Inputs(1)).flatten().astype(np.int64).tolist()
+      elif op_code == tflite.BuiltinOperator.CONCATENATION:
+        # FIXME: This is not in general a no-op
+        layer_type = 'Concatenation'
+        op_opt = op.BuiltinOptions()
+        if op_opt is None:
+          raise RuntimeError('Concatenation options is None')
+        opt = tflite.ConcatenationOptions()
+        opt.Init(op_opt.Bytes, op_opt.Pos)
+        params = [opt.Axis()]
+      elif op_code == tflite.BuiltinOperator.PACK:
+        layer_type = 'Pack'
+        op_opt = op.BuiltinOptions()
+        if op_opt is None:
+          raise RuntimeError('Pack options is None')
+        opt = tflite.PackOptions()
+        opt.Init(op_opt.Bytes, op_opt.Pos)
+        params = [opt.Axis()]
+        if params[0] > 1: raise NotImplementedError(f'Only axis=0,1 supported at layer {op_idx}')
+      elif op_code == tflite.BuiltinOperator.SPLIT:
+        layer_type = 'Split'
+        op_opt = op.BuiltinOptions()
+        if op_opt is None:
+          raise RuntimeError('Split options is None')
+        opt = tflite.SplitOptions()
+        opt.Init(op_opt.Bytes, op_opt.Pos)
+        axis = interpreter.get_tensor(op.Inputs(0)).flatten().astype(np.int64)[0]
+        num_splits = opt.NumSplits()
+        inp = interpreter.get_tensor(op.Inputs(1))
+        if inp.shape[axis] % num_splits != 0:
+          raise NotImplementedError(f'Only equal splits supported at layer {op_idx}')
+        params = [int(axis), num_splits]
+      elif op_code == tflite.BuiltinOperator.SLICE:
+        layer_type = 'Slice'
+        begin = interpreter.get_tensor(op.Inputs(1)).flatten().astype(np.int64).tolist()
+        size = interpreter.get_tensor(op.Inputs(2)).flatten().astype(np.int64).tolist()
+        params = begin + size
+      elif op_code == tflite.BuiltinOperator.RESIZE_NEAREST_NEIGHBOR:
+        layer_type = 'ResizeNearestNeighbor'
+        op_opt = op.BuiltinOptions()
+        if op_opt is None:
+          raise RuntimeError('ResizeNearestNeighbor options is None')
+        opt = tflite.ResizeNearestNeighborOptions()
+        opt.Init(op_opt.Bytes, op_opt.Pos)
+        if opt.AlignCorners():
+          raise NotImplementedError(f'Align corners not supported at layer {op_idx}')
+        if not opt.HalfPixelCenters():
+          raise NotImplementedError(f'Half pixel centers not supported at layer {op_idx}')
+        # Can take the out shape directly from the tensor
+        params = [int(opt.AlignCorners()), int(opt.HalfPixelCenters())]
+
+      # Not implemented
+      else:
+        op_name = None
+        for attr in dir(tflite.BuiltinOperator):
+          if not attr.startswith('__'):
+            if getattr(tflite.BuiltinOperator, attr) == op_code:
+              op_name = attr
+        raise NotImplementedError('Unsupported operator at layer {}: {}, {}'.format(op_idx, op_code, op_name))
+
+      inp_idxes = get_inputs(op)
+      # P4-A：元数据张量只从**本层**运行时依赖里去掉；若别处当数据用，
+      # 它仍会经那个算子的 inp_idxes 进入 keep_tensors（不误删共享常量）
+      _meta = self._metadata_tensor_idxes(op, self._op_name(op_idx))
+      if _meta:
+        inp_idxes = [i for i in inp_idxes if i not in _meta]
+        print('dropping metadata inputs %s from layer %d (%s)'
+              % (sorted(_meta), op_idx, self._op_name(op_idx)))
+      for _i in inp_idxes:
+        keep_tensors.add(_i)
+      # FIXME: hack for testing
+      rsqrt_overflows = [99, 158, 194, 253, 289, 348]
+      if op_idx in rsqrt_overflows:
+        if op_code == tflite.BuiltinOperator.RSQRT:
+          mask = [0, 1]
+        else:
+          mask = []
+      else:
+        mask = []
+      self._layer_op_idxes.append(op_idx)
+      layers.append({
+        'layer_type': layer_type,
+        'inp_idxes': inp_idxes,
+        'inp_shapes': [get_shape(interpreter, inp_idx) for inp_idx in inp_idxes],
+        'out_idxes': [op.Outputs(i) for i in range(op.OutputsLength())],
+        'out_shapes': [get_shape(interpreter, op.Outputs(i)) for i in range(op.OutputsLength())],
+        'params': params,
+        'mask': mask,
+      })
+    print(layers)
+    print()
+
+
+    # P4-A：存活根 = 数据依赖 ∪ 模型输入 ∪ 整图输出 ∪ 导出子图公开输出
+    for _inp in input_details:
+      keep_tensors.add(_inp['index'])
+    for _i in range(graph.OutputsLength()):
+      keep_tensors.add(int(graph.Outputs(_i)))
+    if self.expose_output and layers:
+      for _o in layers[-1]['out_idxes']:
+        keep_tensors.add(int(_o))
+
+    # P4-A：[阻断4] P3/P4 对实际导出子图复检，必须在算完 out_idxes 之前
+    self._validate_padv2_subgraph(layers, start_layer, end_layer)
+
+    # Get tensors
+    print('keep tensors:', keep_tensors)
+    tensors = []
+    for tensor_idx in range(graph.TensorsLength()):
+      if tensor_idx not in keep_tensors:
+        continue
+
+      tensor = graph.Tensors(tensor_idx)
+      if tensor is None:
+        raise NotImplementedError('Tensor is None')
+
+      if tensor_idx in generated_tensor_idxes:
+        print(f'skipping generated tensor: {format(tensor_idx)}, {tensor.Name()}')
+        continue
+
+      shape = []
+      for i in range(tensor.ShapeLength()):
+        shape.append(int(tensor.Shape(i)))
+      if shape == []:
+        shape = [1]
+
+      tensor_data = interpreter.get_tensor(tensor_idx)
+      if tensor.Type() == tflite.TensorType.FLOAT32:
+        tensor_data = self._quantize_checked(tensor_data, tensor_idx)
+      elif tensor.Type() == tflite.TensorType.INT32:
+        tensor_data = tensor_data.astype(np.int64)
+      elif tensor.Type() == tflite.TensorType.INT64:
+        continue
+      else:
+        raise NotImplementedError('Unsupported tensor type: {}'.format(tensor.Type()))
+
+      if tensor_idx in adjusted_tensors:
+        tensor_data = adjusted_tensors[tensor_idx]
+        shape = tensor_data.shape
+
+      tensors.append({
+        'idx': tensor_idx,
+        'shape': shape,
+        'data': tensor_data.flatten().tolist(),
+      })
+      # print(tensor_idx, tensor.Type(), tensor.Name(), tensors[-1]['shape'])
+      # print(np.abs(tensor_data).max())
+
+    commit_before = []
+    commit_after = []
+    if self.commit:
+      input_tensors = [inp['index'] for inp in input_details]
+      weight_tensors = [tensor['idx'] for tensor in tensors if tensor['idx'] not in input_tensors]
+      commit_before = [weight_tensors, input_tensors]
+
+      output_tensors = [out['index'] for out in output_details]
+      commit_after = [output_tensors]
+
+    out_idxes = layers[-1]['out_idxes'] if self.expose_output else []
+    d = {
+      'global_sf': self.scale_factor,
+      'k': self.k,
+      'num_cols': self.num_cols,
+      'num_random': self.num_randoms,
+      'inp_idxes': [inp['index'] for inp in input_details],
+      # 'out_idxes': [out['index'] for out in output_details],
+      'out_idxes': out_idxes,
+      'layers': layers,
+      'tensors': tensors,
+      'use_selectors': self.use_selectors,
+      'commit_before': commit_before,
+      'commit_after': commit_after,
+    }
+    print()
+    print(d['layers'][-1])
+    # d['out_idxes'] = [14]
+    print(d.keys())
+    print(d['out_idxes'])
+    return d
+
+  def to_msgpack(self, start_layer, end_layer, use_selectors=True):
+    d = self.to_dict(start_layer, end_layer)
+    model_packed = msgpack.packb(d, use_bin_type=True)
+    d['tensors'] = []
+    config_packed = msgpack.packb(d, use_bin_type=True)
+    # P4-A：[阻断2] 证据与这次转换的实际产物绑定：摘要 + 子图范围 + 条目数。
+    # 证据来自 self.padv2_evidence（to_dict 内累积），不是另开一个局部列表。
+    if getattr(self, 'padv2_evidence_out', None):
+      import hashlib as _hashlib
+      import json as _json
+      if self._padv2_seen and not self.padv2_evidence:
+        raise RuntimeError('图中有 %d 个 PADV2，但证据列表为空，拒绝写空证据'
+                           % self._padv2_seen)
+      payload = {
+        'subgraph_range': list(self._range),
+        'padv2_count': self._padv2_seen,
+        'model_sha256': _hashlib.sha256(model_packed).hexdigest(),
+        'config_sha256': _hashlib.sha256(config_packed).hexdigest(),
+        'shared_metadata_tensors': {str(k): v for k, v in self.shared_metadata.items()},
+        'evidence': self.padv2_evidence,
+      }
+      with open(self.padv2_evidence_out, 'w') as _f:
+        _json.dump(payload, _f, indent=1, ensure_ascii=False)
+    return model_packed, config_packed
+
+
+def main():
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--model', type=str, required=True)
+  parser.add_argument('--model_output', type=str, required=True)
+  parser.add_argument('--config_output', type=str, required=True)
+  parser.add_argument('--scale_factor', type=int, default=2**16)
+  parser.add_argument('--k', type=int, default=19)
+  parser.add_argument('--eta', type=float, default=0.001)
+  parser.add_argument('--num_cols', type=int, default=6)
+  parser.add_argument('--use_selectors', action=argparse.BooleanOptionalAction, required=False, default=True)
+  parser.add_argument('--commit', action=argparse.BooleanOptionalAction, required=False, default=False)
+  parser.add_argument('--expose_output', action=argparse.BooleanOptionalAction, required=False, default=True)
+  parser.add_argument('--start_layer', type=int, default=0)
+  parser.add_argument('--end_layer', type=int, default=10000)
+  parser.add_argument('--num_randoms', type=int, default=20001)
+  parser.add_argument('--padv2_evidence', type=str, default=None,
+                      help='P4-A: 把 PADV2 图级保护的检查证据写成 JSON')
+  args = parser.parse_args()
+
+  converter = Converter(
+    args.model,
+    args.scale_factor,
+    args.k,
+    args.num_cols,
+    args.num_randoms,
+    args.use_selectors,
+    args.commit,
+    args.expose_output,
+  )
+
+  converter.padv2_evidence_out = args.padv2_evidence
+  model_packed, config_packed = converter.to_msgpack(
+    start_layer=args.start_layer,
+    end_layer=args.end_layer,
+  )
+  if model_packed is None:
+    raise Exception('Failed to convert model')
+
+  with open(args.model_output, 'wb') as f:
+    f.write(model_packed)
+  with open(args.config_output, 'wb') as f:
+    f.write(config_packed)
+
+if __name__ == '__main__':
+  main()

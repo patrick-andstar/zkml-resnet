@@ -1,0 +1,1195 @@
+{
+  "schema": "zkml-repro/p4a-contract-candidates/1",
+  "batch": "P4-A",
+  "generated_at": "2026-11-14T22:37:26+08:00",
+  "generator": {
+    "script": "scripts/p4a_manifest.py",
+    "sha256": "50d1e56cd78802a501ea096311fc429d194ed031b66f45d513cb41af2d8242c2",
+    "python": "3.13.14",
+    "platform": "Windows-11-10.0.26100-SP0",
+    "recompute_hint": "python scripts/p4a_manifest.py --check   # 重算并与本文件比对"
+  },
+  "scope": {
+    "allowed": [
+      "固定源码身份",
+      "候选修复",
+      "静态审查",
+      "P4-B 测试矩阵"
+    ],
+    "forbidden_this_batch": [
+      "编译任何 Rust（cargo check 也没跑）",
+      "运行 converter / 模型 / configure / synthesize / MockProver",
+      "生成 SRS / prove / verify"
+    ],
+    "evidence_class": {
+      "source_identity": "实测（文件摘要）",
+      "max_counterexample": "静态复刻（Python 等价调度，非 Rust 执行）",
+      "numeric_bounds": "静态推导（由 to_field / shift_min_val 代码反推，非实测）",
+      "patch_applicability": "patch --dry-run 通过 / py_compile 通过（未编译、未执行）"
+    }
+  },
+  "source_identity": [
+    {
+      "path": "src/gadgets/max.rs",
+      "local_path": "zkml-main/src/gadgets/max.rs",
+      "lines": 185,
+      "bytes": 5345,
+      "sha256": "1e60cd14d5b4dbbf741ff0c274980224ee1729576545c16680a66efcd0510faa",
+      "role": "MaxChip：本批问题 1 的缺陷所在"
+    },
+    {
+      "path": "src/layers/max_pool_2d.rs",
+      "local_path": "zkml-main/src/layers/max_pool_2d.rs",
+      "lines": 124,
+      "bytes": 3367,
+      "sha256": "886e08a7d0288df269bd49586497067528212cf2ad358aefb932102e50ca1678",
+      "role": "MaxPool2D：窗口长度来源（4/6/9）"
+    },
+    {
+      "path": "src/layers/shape/pad.rs",
+      "local_path": "zkml-main/src/layers/shape/pad.rs",
+      "lines": 97,
+      "bytes": 2725,
+      "sha256": "a9775783b43feb4d6c878c7d6cd6283f8cfb7ace51f1f50bb04f395565cd994d",
+      "role": "PadChip：填充值恒为 0 的硬编码"
+    },
+    {
+      "path": "src/model.rs",
+      "local_path": "zkml-main/src/model.rs",
+      "lines": 836,
+      "bytes": 30336,
+      "sha256": "05d75b45c32de00659c89c60a6e69b12bda4c00cd5766b63430afe632a87bc0e",
+      "role": "to_field / tensor_map_to_vec / ModelConfig"
+    },
+    {
+      "path": "python/converter.py",
+      "local_path": "zkml-main/python/converter.py",
+      "lines": 549,
+      "bytes": 21091,
+      "sha256": "38053886afe0bef2e5945b7d7d096c92ad931f224084a94e5b9f0d70af500039",
+      "role": "PADV2 缺失分支、量化与元数据推导"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "patches/max_reduce_fix.rs",
+      "kind": "patch",
+      "bytes": 10236,
+      "sha256": "970928e8a13520e402eaf34949b66e8913bf8aa505d3e77210da10738d0909db",
+      "desc": "Max 归约候选修复（替换目标文件）"
+    },
+    {
+      "path": "patches/max_reduce_fix.diff",
+      "kind": "diff",
+      "bytes": 9576,
+      "sha256": "fbd65ca442316ce848e1a36b2e1c6e60070a99012d6040432f8c77e0abb59f91",
+      "desc": "同上 unified diff"
+    },
+    {
+      "path": "patches/converter_p4a.py",
+      "kind": "patch",
+      "bytes": 30998,
+      "sha256": "bf2ce3b00df898204b720e8681eb42e3e8929ebb6347bec312029556f40b6cee",
+      "desc": "converter 契约补丁（替换目标文件）"
+    },
+    {
+      "path": "patches/converter_p4a.diff",
+      "kind": "diff",
+      "bytes": 12746,
+      "sha256": "841128ef763abab69ab3322cee26150ec16313674e8ef9920200f9bfb783d327",
+      "desc": "同上 unified diff"
+    },
+    {
+      "path": "patches/model_numeric_contract.rs",
+      "kind": "patch",
+      "bytes": 34526,
+      "sha256": "350c20777d4046c777d77780481d5347c3f7d410d1c1102e62c5dd335a2a2e83",
+      "desc": "数值边界 + 禁止填洞（替换目标文件）"
+    },
+    {
+      "path": "patches/model_numeric_contract.diff",
+      "kind": "diff",
+      "bytes": 5046,
+      "sha256": "6fe9ff4c64da9465fa14902e0ca1f9bdce16e918f1aa6c096d2b4a087a126d51",
+      "desc": "同上 unified diff"
+    },
+    {
+      "path": "patches/pad_contract.rs",
+      "kind": "patch",
+      "bytes": 3608,
+      "sha256": "7cb8e97ec2faceb3fe5a55de336ae1d5024cdbcfcfc22d3962256f0e99abdc5a",
+      "desc": "Pad 单输入断言 + 填充值契约（替换目标文件）"
+    },
+    {
+      "path": "patches/pad_contract.diff",
+      "kind": "diff",
+      "bytes": 1452,
+      "sha256": "14b28338aa15d1bc7c83c9a67745f4302310082de2917adb65d7fbe462514f68",
+      "desc": "同上 unified diff"
+    },
+    {
+      "path": "scripts/p4a_max_model.py",
+      "kind": "script",
+      "bytes": 7748,
+      "sha256": "e3b6251805cdd8708c06a6ddb41d2987cfff89ae5ae8a870a7caf3d50e4ae5b0",
+      "desc": "Max 源码等价复刻 + 反例/穷举/行数成本"
+    },
+    {
+      "path": "scripts/p4a_make_converter_patch.py",
+      "kind": "script",
+      "bytes": 16470,
+      "sha256": "62166411e1a48f132f1ef60dc33b384893d90e3cfc5f4b11afb23a3dabc635e4",
+      "desc": "converter 补丁生成器（幂等，锚点不唯一即失败）"
+    },
+    {
+      "path": "scripts/p4a_make_model_patch.py",
+      "kind": "script",
+      "bytes": 7254,
+      "sha256": "6a23f47dd964fce73fc476e9b2543aef6098e6324f16cc70aa96f54ce49e249e",
+      "desc": "model.rs 补丁生成器"
+    },
+    {
+      "path": "scripts/p4a_make_pad_patch.py",
+      "kind": "script",
+      "bytes": 2560,
+      "sha256": "28e5a985b6f5f2fce1a45f5166de10cc3371c8c77eee5239a3f5eb427e6570d0",
+      "desc": "pad.rs 补丁生成器"
+    }
+  ],
+  "problem_1_max": {
+    "defect": {
+      "location": "src/gadgets/max.rs :: MaxChip::forward / op_row_region / op_aligned_rows",
+      "mechanism": {
+        "G": "columns.len()/3 = num_outputs_per_row",
+        "in_per_row": "2G = num_inputs_per_row",
+        "pairing": "op_row_region 用 inp.chunks(G) 取前两块再 zip → 一行把位置 i 与位置 G+i 配对",
+        "D1": "归约停在 G 个输出（补齐后成不动点），末尾只取 outputs[0] → 返回值退化为某个同余类的最大值",
+        "D2": "num_iters = div_ceil + num_inputs_per_row 是经验常数，不是「直到剩 1 个」；多出的迭代全在不动点上空转",
+        "independence": "调大 num_iters 无法消除 D1：outputs 长度仍是 G，outputs[0] 仍是同余类最大"
+      },
+      "minimal_counterexample": {
+        "cols": 6,
+        "input": [
+          0,
+          1
+        ],
+        "got": 0,
+        "want": 1
+      },
+      "plan_md_counterexample": [
+        {
+          "cols": 3,
+          "got": 1,
+          "want": 1
+        },
+        {
+          "cols": 6,
+          "got": 0,
+          "want": 1
+        },
+        {
+          "cols": 9,
+          "got": 0,
+          "want": 1
+        },
+        {
+          "cols": 12,
+          "got": 0,
+          "want": 1
+        }
+      ],
+      "coverage_fingerprint": {
+        "definition": "把 1 放在下标 i、其余取 0 时函数返回值仍为 1 的下标集合",
+        "rows": [
+          {
+            "cols": 3,
+            "n": 1,
+            "covered": [
+              0
+            ],
+            "missing": []
+          },
+          {
+            "cols": 3,
+            "n": 2,
+            "covered": [
+              0,
+              1
+            ],
+            "missing": []
+          },
+          {
+            "cols": 3,
+            "n": 3,
+            "covered": [
+              0,
+              1,
+              2
+            ],
+            "missing": []
+          },
+          {
+            "cols": 3,
+            "n": 4,
+            "covered": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "missing": []
+          },
+          {
+            "cols": 3,
+            "n": 5,
+            "covered": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "missing": []
+          },
+          {
+            "cols": 3,
+            "n": 6,
+            "covered": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "missing": []
+          },
+          {
+            "cols": 3,
+            "n": 9,
+            "covered": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ],
+            "missing": []
+          },
+          {
+            "cols": 3,
+            "n": 12,
+            "covered": [
+              0,
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "missing": []
+          },
+          {
+            "cols": 6,
+            "n": 1,
+            "covered": [
+              0
+            ],
+            "missing": []
+          },
+          {
+            "cols": 6,
+            "n": 2,
+            "covered": [
+              0
+            ],
+            "missing": [
+              1
+            ]
+          },
+          {
+            "cols": 6,
+            "n": 3,
+            "covered": [
+              0,
+              2
+            ],
+            "missing": [
+              1
+            ]
+          },
+          {
+            "cols": 6,
+            "n": 4,
+            "covered": [
+              0,
+              2
+            ],
+            "missing": [
+              1,
+              3
+            ]
+          },
+          {
+            "cols": 6,
+            "n": 5,
+            "covered": [
+              0,
+              2,
+              4
+            ],
+            "missing": [
+              1,
+              3
+            ]
+          },
+          {
+            "cols": 6,
+            "n": 6,
+            "covered": [
+              0,
+              2,
+              4
+            ],
+            "missing": [
+              1,
+              3,
+              5
+            ]
+          },
+          {
+            "cols": 6,
+            "n": 9,
+            "covered": [
+              0,
+              2,
+              4,
+              6,
+              8
+            ],
+            "missing": [
+              1,
+              3,
+              5,
+              7
+            ]
+          },
+          {
+            "cols": 6,
+            "n": 12,
+            "covered": [
+              0,
+              2,
+              4,
+              6,
+              8,
+              10
+            ],
+            "missing": [
+              1,
+              3,
+              5,
+              7,
+              9,
+              11
+            ]
+          },
+          {
+            "cols": 9,
+            "n": 1,
+            "covered": [
+              0
+            ],
+            "missing": []
+          },
+          {
+            "cols": 9,
+            "n": 2,
+            "covered": [
+              0
+            ],
+            "missing": [
+              1
+            ]
+          },
+          {
+            "cols": 9,
+            "n": 3,
+            "covered": [
+              0
+            ],
+            "missing": [
+              1,
+              2
+            ]
+          },
+          {
+            "cols": 9,
+            "n": 4,
+            "covered": [
+              0,
+              3
+            ],
+            "missing": [
+              1,
+              2
+            ]
+          },
+          {
+            "cols": 9,
+            "n": 5,
+            "covered": [
+              0,
+              3
+            ],
+            "missing": [
+              1,
+              2,
+              4
+            ]
+          },
+          {
+            "cols": 9,
+            "n": 6,
+            "covered": [
+              0,
+              3
+            ],
+            "missing": [
+              1,
+              2,
+              4,
+              5
+            ]
+          },
+          {
+            "cols": 9,
+            "n": 9,
+            "covered": [
+              0,
+              3,
+              6
+            ],
+            "missing": [
+              1,
+              2,
+              4,
+              5,
+              7,
+              8
+            ]
+          },
+          {
+            "cols": 9,
+            "n": 12,
+            "covered": [
+              0,
+              3,
+              6,
+              9
+            ],
+            "missing": [
+              1,
+              2,
+              4,
+              5,
+              7,
+              8,
+              10,
+              11
+            ]
+          },
+          {
+            "cols": 12,
+            "n": 1,
+            "covered": [
+              0
+            ],
+            "missing": []
+          },
+          {
+            "cols": 12,
+            "n": 2,
+            "covered": [
+              0
+            ],
+            "missing": [
+              1
+            ]
+          },
+          {
+            "cols": 12,
+            "n": 3,
+            "covered": [
+              0
+            ],
+            "missing": [
+              1,
+              2
+            ]
+          },
+          {
+            "cols": 12,
+            "n": 4,
+            "covered": [
+              0
+            ],
+            "missing": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "cols": 12,
+            "n": 5,
+            "covered": [
+              0,
+              4
+            ],
+            "missing": [
+              1,
+              2,
+              3
+            ]
+          },
+          {
+            "cols": 12,
+            "n": 6,
+            "covered": [
+              0,
+              4
+            ],
+            "missing": [
+              1,
+              2,
+              3,
+              5
+            ]
+          },
+          {
+            "cols": 12,
+            "n": 9,
+            "covered": [
+              0,
+              4,
+              8
+            ],
+            "missing": [
+              1,
+              2,
+              3,
+              5,
+              6,
+              7
+            ]
+          },
+          {
+            "cols": 12,
+            "n": 12,
+            "covered": [
+              0,
+              4,
+              8
+            ],
+            "missing": [
+              1,
+              2,
+              3,
+              5,
+              6,
+              7,
+              9,
+              10,
+              11
+            ]
+          }
+        ]
+      },
+      "exhaustive_01": {
+        "definition": "对全部 0/1 输入全枚举（非抽样），统计取值 != max(bits) 的例数",
+        "rows": [
+          {
+            "cols": 3,
+            "n": 2,
+            "bad": 0,
+            "total": 4,
+            "rate": 0.0
+          },
+          {
+            "cols": 3,
+            "n": 3,
+            "bad": 0,
+            "total": 8,
+            "rate": 0.0
+          },
+          {
+            "cols": 3,
+            "n": 4,
+            "bad": 0,
+            "total": 16,
+            "rate": 0.0
+          },
+          {
+            "cols": 3,
+            "n": 6,
+            "bad": 0,
+            "total": 64,
+            "rate": 0.0
+          },
+          {
+            "cols": 3,
+            "n": 9,
+            "bad": 0,
+            "total": 512,
+            "rate": 0.0
+          },
+          {
+            "cols": 3,
+            "n": 10,
+            "bad": 0,
+            "total": 1024,
+            "rate": 0.0
+          },
+          {
+            "cols": 6,
+            "n": 2,
+            "bad": 1,
+            "total": 4,
+            "rate": 0.25
+          },
+          {
+            "cols": 6,
+            "n": 3,
+            "bad": 1,
+            "total": 8,
+            "rate": 0.125
+          },
+          {
+            "cols": 6,
+            "n": 4,
+            "bad": 3,
+            "total": 16,
+            "rate": 0.1875
+          },
+          {
+            "cols": 6,
+            "n": 6,
+            "bad": 7,
+            "total": 64,
+            "rate": 0.109375
+          },
+          {
+            "cols": 6,
+            "n": 9,
+            "bad": 15,
+            "total": 512,
+            "rate": 0.029297
+          },
+          {
+            "cols": 6,
+            "n": 10,
+            "bad": 31,
+            "total": 1024,
+            "rate": 0.030273
+          },
+          {
+            "cols": 9,
+            "n": 2,
+            "bad": 1,
+            "total": 4,
+            "rate": 0.25
+          },
+          {
+            "cols": 9,
+            "n": 3,
+            "bad": 3,
+            "total": 8,
+            "rate": 0.375
+          },
+          {
+            "cols": 9,
+            "n": 4,
+            "bad": 3,
+            "total": 16,
+            "rate": 0.1875
+          },
+          {
+            "cols": 9,
+            "n": 6,
+            "bad": 15,
+            "total": 64,
+            "rate": 0.234375
+          },
+          {
+            "cols": 9,
+            "n": 9,
+            "bad": 63,
+            "total": 512,
+            "rate": 0.123047
+          },
+          {
+            "cols": 9,
+            "n": 10,
+            "bad": 63,
+            "total": 1024,
+            "rate": 0.061523
+          },
+          {
+            "cols": 12,
+            "n": 2,
+            "bad": 1,
+            "total": 4,
+            "rate": 0.25
+          },
+          {
+            "cols": 12,
+            "n": 3,
+            "bad": 3,
+            "total": 8,
+            "rate": 0.375
+          },
+          {
+            "cols": 12,
+            "n": 4,
+            "bad": 7,
+            "total": 16,
+            "rate": 0.4375
+          },
+          {
+            "cols": 12,
+            "n": 6,
+            "bad": 15,
+            "total": 64,
+            "rate": 0.234375
+          },
+          {
+            "cols": 12,
+            "n": 9,
+            "bad": 63,
+            "total": 512,
+            "rate": 0.123047
+          },
+          {
+            "cols": 12,
+            "n": 10,
+            "bad": 127,
+            "total": 1024,
+            "rate": 0.124023
+          }
+        ]
+      },
+      "row_cost": {
+        "definition": "单次 MaxChip::forward 产生的 gadget 行数（由调度逻辑计数，非实测）",
+        "rows": [
+          {
+            "cols": 3,
+            "n": 4,
+            "current": 6,
+            "fixed": 3
+          },
+          {
+            "cols": 3,
+            "n": 6,
+            "current": 9,
+            "fixed": 6
+          },
+          {
+            "cols": 3,
+            "n": 9,
+            "current": 15,
+            "fixed": 11
+          },
+          {
+            "cols": 6,
+            "n": 4,
+            "current": 6,
+            "fixed": 2
+          },
+          {
+            "cols": 6,
+            "n": 6,
+            "current": 8,
+            "fixed": 4
+          },
+          {
+            "cols": 6,
+            "n": 9,
+            "current": 11,
+            "fixed": 7
+          },
+          {
+            "cols": 9,
+            "n": 4,
+            "current": 8,
+            "fixed": 4
+          },
+          {
+            "cols": 9,
+            "n": 6,
+            "current": 8,
+            "fixed": 4
+          },
+          {
+            "cols": 9,
+            "n": 9,
+            "current": 10,
+            "fixed": 6
+          },
+          {
+            "cols": 12,
+            "n": 4,
+            "current": 10,
+            "fixed": 3
+          },
+          {
+            "cols": 12,
+            "n": 6,
+            "current": 10,
+            "fixed": 4
+          },
+          {
+            "cols": 12,
+            "n": 9,
+            "current": 12,
+            "fixed": 6
+          }
+        ]
+      },
+      "affects_pooled_windows": {
+        "note": "max_pool_2d.rs 的 splat 只在越界时跳过，因此窗口长度不是常数",
+        "lengths": [
+          9,
+          6,
+          4
+        ],
+        "kinds": [
+          "内部 3x3",
+          "边缘（一边越界）",
+          "角（两边越界）"
+        ],
+        "conclusion": "C=6 时 n=4/6/9 全部踩中 D1，不是只有内部窗口出错"
+      }
+    },
+    "candidate_fix": {
+      "patch": "patches/max_reduce_fix.rs",
+      "algorithm": {
+        "stage1_tree": "while L > G { 补齐到 2G 的倍数（补 cur[0]）; 一次行归约 }  L -> ceil(L/(2G))*G",
+        "stage2_collapse": "while L > 1 { 两两 max2 }  L -> ceil(L/2)",
+        "max2_layout": "一行长 2G：位置 0 放 a、位置 G 放 b、其余填 a → 第 0 组=(a,b) → out[0]=max(a,b)",
+        "why_not_naive": "[a,b] 直接补齐送行归约时 a、b 落在不同组的同一侧，永不被比较 —— 正是原缺陷机理"
+      },
+      "invariants": {
+        "I1": "cur 每个 cell 都是原始输入某个非空子集的最大值 ⇒ max(cur) = 全窗口最大",
+        "I2": "补齐只复制 cur[0]（集合内元素），既不引入更大值也不删元素",
+        "I3": "一次行归约按 (i, G+i) 配对，覆盖全部 2G 输入且不重不漏",
+        "I4": "max2(a,b) 精确等于 max(a,b)，长度减半",
+        "termination": "阶段一 L>G 时 ceil(L/(2G))*G < L；阶段二 ceil(L/2) < L（L≥2）"
+      },
+      "domain": {
+        "supported": "任意 n≥1；任意 3 的倍数且 ≥3 的列数",
+        "verified_by_replica": "n ∈ 1..10，cols ∈ {3,6,9,12}：覆盖全位置且 0/1 穷举全过"
+      },
+      "rejects": {
+        "columns_len_not_multiple_of_3": "构造期 assert_eq!（原实现用整除静默截断，例如 7 列被当 2 组、第 7 列永不使用）",
+        "columns_len_lt_3": "构造期 assert!",
+        "empty_input": "Err(Error::Synthesis)（原实现在 inputs[0] 处 panic）",
+        "single_element": "直接返回，占 0 行"
+      },
+      "uncompiled_risk": "Error::Synthesis 变体名需在 P4-B 首次编译时确认；该 rev 的 plonk::Error 若无此 unit variant，换已知变体即可，不影响算法",
+      "replica_verification": {
+        "counterexample_plane": {
+          "cols": [
+            3,
+            6,
+            9,
+            12
+          ],
+          "got": [
+            1,
+            1,
+            1,
+            1
+          ],
+          "want": [
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        "empty_input": "ValueError（契约要求拒绝）",
+        "note": "以上均为 Python 复刻结果，非 Rust 执行结果"
+      }
+    }
+  },
+  "problem_2_3_padv2": {
+    "gap_before": {
+      "converter": "converter.py 完全没有 PADV2 分支（P3 实测停在 layer 2: 60, PADV2）",
+      "p3_probe_was_not_a_contract": "P3 探针补丁只是「当 PAD 处理」，未做任何图检查 ⇒ -inf→0 降级无条件发生",
+      "rust_side": "PadChip 硬编码 constants.get(&0)（填充值恒为 0）；dag.forward 在调层前把全部 inp_idxes 从 tensor_map clone 出来",
+      "silent_fill": "tensor_map_to_vec 用 smallest_tensor 静默填补索引空洞 ⇒ 只从 tensors 删 idx1 不够，漏改的层会拿到形状可能恰好对得上的错误张量"
+    },
+    "graph_indexing": "按 tensor ID 建 producer[t] 与 consumers[t]=[(op_idx, input_pos)]，不依赖算子列表顺序或「相邻」",
+    "conditions": [
+      {
+        "id": "P1",
+        "rule": "常量是单元素，且为 -inf 或 0",
+        "why": "其它常量（如 -3.0）无法用 0 填充等价"
+      },
+      {
+        "id": "P2",
+        "rule": "-inf 时数据输入的生产者 fused activation 必须是 RELU",
+        "why": "0 填充与 -inf 填充等价 ⟺ max(x) ≥ 0；ReLU 给的就是这个保证"
+      },
+      {
+        "id": "P3",
+        "rule": "Pad 输出恰好 1 个消费者，且是 pad=VALID、无 fused activation 的 MAX_POOL_2D",
+        "why": "Pad 输出若还被别的算子观察，降级就不只影响池化"
+      },
+      {
+        "id": "P4",
+        "rule": "Pad 输出不是图输出",
+        "why": "公开张量不能被悄悄改值"
+      },
+      {
+        "id": "P5",
+        "rule": "填充在 H/W 上对称、每侧 < 核尺寸；batch/channel 轴无填充",
+        "why": "对称 = PyTorch 语义；pad ≥ kernel 会出现整窗皆填充，此时 0 与 -inf 结果不同"
+      }
+    ],
+    "reject_policy": "任一条件不满足即拒绝，不静默降级",
+    "p5_check_this_graph": "本图 pad=1, kernel=3 → 满足（对称且 1 < 3）",
+    "metadata_cleanup": {
+      "registry": {
+        "PAD": [
+          1
+        ],
+        "PADV2": [
+          1,
+          2
+        ],
+        "MEAN": [
+          1
+        ]
+      },
+      "extra_guard": "该 tensor 的全部消费者都只在元数据位置引用它，才允许移除",
+      "recompute": "按过滤后的 inp_idxes 重算 keep_tensors，而不是只从 tensors 删条目",
+      "expected_removed_tensors": "PADV2 的 paddings([4,2]) 与 -inf 常量([1])、4 个 PAD 的 paddings（预期，本批未执行转换）",
+      "expected_dep_change": "PADV2 的依赖 [48,45,1] → [48]；tensor ID 保留不变（预期，未验证）",
+      "not_registered": "RESHAPE/TRANSPOSE/SLICE/SPLIT 等虽同为元数据驱动，但本图没有这些算子，登记了也无法验证 —— 无证据的扩大改动面不做"
+    },
+    "rust_side_assert": {
+      "patch": "patches/pad_contract.rs",
+      "change": "恢复被注释掉的 assert_eq!(tensors.len(), 1)",
+      "why": "原注释 `// FIXME: the pad from tflite is actually two, but mine is one` 正是当年绕过点"
+    }
+  },
+  "problem_4_numeric": {
+    "encoding_interval": {
+      "code": "model.rs:297-302  F::from((x + 2^31) as u64) - F::from(2^31)",
+      "branches": [
+        {
+          "range": "[-2^31, 2^31-1]",
+          "behavior": "x + 2^31 ∈ [0, 2^32-1]，as u64 精确，减回去等于 x",
+          "ok": true
+        },
+        {
+          "range": "x < -2^31",
+          "behavior": "x + 2^31 为负 → as u64 补码回绕 → 编码成 x + 2^64（巨大正元素），静默改义",
+          "ok": false
+        },
+        {
+          "range": "x > 2^31-1",
+          "behavior": "x + 2^31 可能溢出 i64（debug panic / release 回绕）",
+          "ok": false
+        }
+      ],
+      "consequence": "-inf → INT64_MIN = -2^63 落在第二条 ⇒ 若在 Rust 侧被赋值会变成 2^63 量级正元素。P3「对下游无影响」只在 TFLite/msgpack 层成立"
+    },
+    "derived_constraints": [
+      {
+        "name": "k ≤ 32",
+        "derivation": "min_val = -(2^(k-1)) 必须 ≥ -2^31",
+        "fail_at": "k=33"
+      },
+      {
+        "name": "sf ≤ 2^22",
+        "derivation": "shift_min_val = -(sf²·2^17) 不溢出 i64，即 sf²·2^18 ≤ 2^63-1",
+        "pass_eg": "sf=2^22 → 2^62",
+        "fail_eg": "sf=2^23 → 2^64"
+      }
+    ],
+    "i64_overflow_note": "原代码 -(global_sf * global_sf * (1 << 17)) 是 i64 乘法，release 溢出静默；补丁改 i128::checked_mul",
+    "maxchip_own_domain": {
+      "requirement": "convert_to_u64(&(v + 2^49)) 要求 v + 2^49 ∈ [0, 2^64)（big_digits.len()==2 会 panic）",
+      "general": "-2^49 ≤ v < 2^64 - sf²·2^17",
+      "conclusion": "配合编码区间，编码区间才是绑定约束；写下来是为防止「以为 Max 能处理任意大数」"
+    },
+    "rounding": {
+      "before": "converter.py 用 (x*sf).round() = numpy half-to-even（银行家舍入）",
+      "after": "显式 round_half_away_from_zero",
+      "why": "理由不是更准，而是规则必须写死并被两边知道；否则首个分歧会被误判成算子错误"
+    },
+    "checks": [
+      {
+        "id": "N1",
+        "rule": "loader 逐元素检查落到 [-2^31, 2^31-1]，越界报 tensor id + 下标"
+      },
+      {
+        "id": "N2",
+        "rule": "to_field 入口 debug_assert"
+      },
+      {
+        "id": "N3",
+        "rule": "assert!(config.k <= 32)；sf²·2^18 用 i128::checked_mul"
+      },
+      {
+        "id": "N4",
+        "rule": "tensor_map 缺键即 panic 并打印缺失列表，禁止 smallest_tensor 填洞"
+      },
+      {
+        "id": "N5",
+        "rule": "smallest_tensor 改名 _smallest_tensor（防 deny(warnings)）"
+      }
+    ],
+    "open_items": [
+      "lookup 表的差值域到底覆盖 [0,2^k] 还是更窄：本批未逐表核对 input_lookup 填充方式（P4-B 第一项）",
+      "各 gadget 自己的 min_val/max_val 派生域（ReLU/Div/BiasDiv 各不相同）：本批只给出框架与 Max 一条"
+    ]
+  },
+  "p4b_test_matrix": {
+    "compile": [
+      "cargo check --locked 只编 src，确认 4 个补丁的类型/借用/Error::Synthesis 变体",
+      "先单独应用 max_reduce_fix 编译；再叠加另三个（分开才能定位失败补丁）"
+    ],
+    "max": [
+      {
+        "case": "n=2, [0,1]",
+        "expect": "1（原实现 0，最小复现）"
+      },
+      {
+        "case": "n=9, x1=1 其余 0",
+        "expect": "1（原实现 0）"
+      },
+      {
+        "case": "9 元素逐位置取最大（9 例）",
+        "expect": "各自等于该位置值"
+      },
+      {
+        "case": "并列最大 / 全 0 / 全同值 / 合法负值（全 -3）",
+        "expect": "正确"
+      },
+      {
+        "case": "全负窗口（neg_const 造出的池化窗口）",
+        "expect": "正确 —— 必须单独覆盖"
+      },
+      {
+        "case": "长度 4 / 6 / 9（角/边/内部）",
+        "expect": "正确"
+      },
+      {
+        "case": "非整行长度 5、7 及奇数长度",
+        "expect": "正确"
+      },
+      {
+        "case": "columns ∈ {3,6,9,12} 全部重跑",
+        "expect": "正确（3 列是对照组）"
+      },
+      {
+        "case": "空输入",
+        "expect": "Err，不 panic"
+      },
+      {
+        "case": "约束侧：每行 (in1-out)(in2-out)=0 与两条差值 lookup 同时成立",
+        "expect": "MockProver 通过"
+      }
+    ],
+    "pad_max": [
+      {
+        "case": "本图 conv1+ReLU → PADV2(-inf) → MaxPool",
+        "expect": "转换通过，证据 JSON 落盘"
+      },
+      {
+        "case": "生产者不是 ReLU",
+        "expect": "拒绝"
+      },
+      {
+        "case": "PADV2 常量改成 -3.0",
+        "expect": "拒绝"
+      },
+      {
+        "case": "Pad 输出多接一个消费者",
+        "expect": "拒绝"
+      },
+      {
+        "case": "Pad 输出设为图输出",
+        "expect": "拒绝"
+      },
+      {
+        "case": "pad=2, kernel=3（整窗可为填充）",
+        "expect": "拒绝"
+      },
+      {
+        "case": "删 pads 后漏改某层 inp_idxes",
+        "expect": "N4 立即 panic 并打印缺失索引"
+      },
+      {
+        "case": "MNIST 既有 msgpack 在 N4 下加载",
+        "expect": "索引连续→通过；不连续→说明填洞在用，需回退 N4 或修数据"
+      }
+    ],
+    "numeric": [
+      {
+        "case": "x = -2^31 / 2^31-1",
+        "expect": "编码精确"
+      },
+      {
+        "case": "x = -2^31-1 / 2^31",
+        "expect": "拒绝并报 tensor id + 下标"
+      },
+      {
+        "case": "INT64_MIN",
+        "expect": "拒绝（正是 -inf 的产物）"
+      },
+      {
+        "case": "NaN / ±Inf",
+        "expect": "converter 侧 _quantize_checked 就拒绝"
+      },
+      {
+        "case": "k=32 / k=33",
+        "expect": "通过 / 拒绝"
+      },
+      {
+        "case": "sf=2^22 / sf=2^23",
+        "expect": "通过 / 拒绝"
+      }
+    ],
+    "cost_caveat": "即使只测一个 gadget 的 MockProver 也走 configure，而 configure 按 2^k 建 HashMap 与 lookup；P4-B 必须显式指定小 k 并先算 configure 开销",
+    "stop_condition": "任一用例与参考不符即停；宁可留失败原件，也不调参掩盖"
+  },
+  "not_concluded": [
+    "「Max 已修复」——只做了静态论证与 Python 复刻，没有编译、没有约束检查",
+    "「PADV2 补丁可直接采纳」——拒绝条件写好了，但没有在本图跑过一次转换",
+    "「依赖清理已验证」——keep_tensors 重算正确性依赖 N4 一起上，两者都未执行",
+    "「k ≤ 32 / sf ≤ 2^22 是实测结论」——是从代码反推的约束",
+    "任何关于目标规模、prove 时间、1s 目标的判断"
+  ],
+  "reproduce": [
+    "python scripts/p4a_max_model.py",
+    "python scripts/p4a_make_converter_patch.py",
+    "python scripts/p4a_make_model_patch.py",
+    "python scripts/p4a_make_pad_patch.py",
+    "python scripts/p4a_manifest.py --check"
+  ]
+}

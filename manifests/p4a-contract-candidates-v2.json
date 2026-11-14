@@ -1,0 +1,407 @@
+{
+  "schema": "zkml-repro/p4a-contract-candidates-v2/1",
+  "batch": "P4-A 补正",
+  "generated_at": "2026-11-14T23:07:26+08:00",
+  "supersedes": "manifests/p4a-contract-candidates.json（v1，保留不改）",
+  "generator": {
+    "script": "scripts/p4a_manifest_v2.py",
+    "sha256": "f08e23cdd3e38ea4d1faf2419bff6b63cfc97d5891258273117f95781c1612b8",
+    "python": "3.13.14",
+    "platform": "Windows-11-10.0.26100-SP0",
+    "recompute_hint": "python scripts/p4a_manifest_v2.py --check"
+  },
+  "scope": {
+    "allowed": [
+      "修复 §2.8.2 六项阻断",
+      "候选与生成器一致性",
+      "静态门禁与自测",
+      "更正测试矩阵"
+    ],
+    "forbidden_this_batch": [
+      "编译任何 Rust（cargo check 也没跑）",
+      "运行 converter / 模型 / configure / synthesize / MockProver",
+      "生成 SRS / prove / verify"
+    ]
+  },
+  "evidence_class_legend": {
+    "computed": "本次生成时由脚本重算（摘要、大小、数值边界、门禁结果、自测结果）",
+    "hand_written": "人写的判断/理由；脚本只能验证它在文件里存在，不能验证它正确"
+  },
+  "not_auto_derived": [
+    "六项阻断的 fix 列表与 residual_risk：设计判断，不是脚本推导",
+    "P4-B 测试矩阵的期望值：待执行",
+    "阻断6 的窗口几何论证：手写推理，只做了形状公式的算术核对"
+  ],
+  "source_identity_unchanged": [
+    {
+      "path": "zkml-main/src/gadgets/max.rs",
+      "bytes": 5345,
+      "sha256": "1e60cd14d5b4dbbf741ff0c274980224ee1729576545c16680a66efcd0510faa"
+    },
+    {
+      "path": "zkml-main/src/layers/max_pool_2d.rs",
+      "bytes": 3367,
+      "sha256": "886e08a7d0288df269bd49586497067528212cf2ad358aefb932102e50ca1678"
+    },
+    {
+      "path": "zkml-main/src/layers/shape/pad.rs",
+      "bytes": 2725,
+      "sha256": "a9775783b43feb4d6c878c7d6cd6283f8cfb7ace51f1f50bb04f395565cd994d"
+    },
+    {
+      "path": "zkml-main/src/model.rs",
+      "bytes": 30336,
+      "sha256": "05d75b45c32de00659c89c60a6e69b12bda4c00cd5766b63430afe632a87bc0e"
+    },
+    {
+      "path": "zkml-main/python/converter.py",
+      "bytes": 21091,
+      "sha256": "38053886afe0bef2e5945b7d7d096c92ad931f224084a94e5b9f0d70af500039"
+    }
+  ],
+  "v1_artifacts_preserved": [
+    {
+      "path": "patches/max_reduce_fix.rs",
+      "bytes": 10236,
+      "sha256": "970928e8a13520e402eaf34949b66e8913bf8aa505d3e77210da10738d0909db"
+    },
+    {
+      "path": "patches/max_reduce_fix.diff",
+      "bytes": 9576,
+      "sha256": "fbd65ca442316ce848e1a36b2e1c6e60070a99012d6040432f8c77e0abb59f91"
+    },
+    {
+      "path": "patches/converter_p4a.py",
+      "bytes": 30998,
+      "sha256": "bf2ce3b00df898204b720e8681eb42e3e8929ebb6347bec312029556f40b6cee"
+    },
+    {
+      "path": "patches/converter_p4a.diff",
+      "bytes": 12746,
+      "sha256": "841128ef763abab69ab3322cee26150ec16313674e8ef9920200f9bfb783d327"
+    },
+    {
+      "path": "patches/model_numeric_contract.rs",
+      "bytes": 34526,
+      "sha256": "350c20777d4046c777d77780481d5347c3f7d410d1c1102e62c5dd335a2a2e83"
+    },
+    {
+      "path": "patches/model_numeric_contract.diff",
+      "bytes": 5046,
+      "sha256": "6fe9ff4c64da9465fa14902e0ca1f9bdce16e918f1aa6c096d2b4a087a126d51"
+    },
+    {
+      "path": "patches/pad_contract.rs",
+      "bytes": 3608,
+      "sha256": "7cb8e97ec2faceb3fe5a55de336ae1d5024cdbcfcfc22d3962256f0e99abdc5a"
+    },
+    {
+      "path": "patches/pad_contract.diff",
+      "bytes": 1452,
+      "sha256": "14b28338aa15d1bc7c83c9a67745f4302310082de2917adb65d7fbe462514f68"
+    },
+    {
+      "path": "manifests/p4a-contract-candidates.json",
+      "bytes": 32292,
+      "sha256": "f624faefb8938bc00431ec474bdb526b6ca45283a676561c94f3c92f8e1bba1c"
+    }
+  ],
+  "v2_artifacts": [
+    {
+      "path": "patches/converter_p4a_v2.py",
+      "bytes": 41615,
+      "sha256": "e7b7380616294ddc18487186c083e6dfe4714e02efb7ce63a79d0edc8aaec44d"
+    },
+    {
+      "path": "patches/converter_p4a_v2.diff",
+      "bytes": 24746,
+      "sha256": "6bd2676a8d0425675331a4d474a5820895fb93b862e27a7c61b48dc57f4f9fb2"
+    },
+    {
+      "path": "patches/model_numeric_contract_v2.rs",
+      "bytes": 39215,
+      "sha256": "5e4cb13210113950f51e3002365f25877ab2aacdc9fd39d72689bb91ec817679"
+    },
+    {
+      "path": "patches/model_numeric_contract_v2.diff",
+      "bytes": 11603,
+      "sha256": "908f4c779cf844e941ec6d4703d44e72efce7cd973fad1b7864b1717634dbdf7"
+    },
+    {
+      "path": "scripts/p4a_make_converter_patch_v2.py",
+      "bytes": 32458,
+      "sha256": "6fa56b869911f1349fdb40be77b13e9e6b06b16df40459d1a671242240484816"
+    },
+    {
+      "path": "scripts/p4a_make_model_patch_v2.py",
+      "bytes": 20347,
+      "sha256": "138db71158a760666997d77b03d774cc04b6faeb49ca03a1611d28bcbff13e9b"
+    },
+    {
+      "path": "scripts/p4a_quant_selftest.py",
+      "bytes": 6630,
+      "sha256": "d5d75db1aa65cabee1d26f03b2f17fe8c5c3a4ef512eee860814ac9c6c7b77f5"
+    },
+    {
+      "path": "scripts/p4a_manifest_v2.py",
+      "bytes": 21831,
+      "sha256": "f08e23cdd3e38ea4d1faf2419bff6b63cfc97d5891258273117f95781c1612b8"
+    }
+  ],
+  "corrections": [
+    {
+      "id": "阻断1",
+      "title": "converter 调用不存在的方法，舍入与有限性检查未接通",
+      "v1_defect": "patches/converter_p4a.py:654 调用 self._quantize_checked，但候选里没有该方法；生成器定义了 QUANT 字符串，E8 只插入了 METHODS。另有 CUSTOM 权重与 DIV 两处 .round().astype 绕过全部检查。",
+      "fix": [
+        "E8 改为 METHODS + QUANT，_quantize_checked 真正进入类体",
+        "三个量化点全部改为 self._quantize_checked：主张量循环、CUSTOM 权重（already_scaled）、DIV 的 adjusted_tensors（already_scaled）",
+        "L1 硬边界（原编码精确域）与 L2 主动 i32 策略分成两层检查、两套文案",
+        "比较全部搬到整数域：float64 在 2^53 以上无法精确表示每个整数，直接用 float 和 2^63 比会差几百到几千"
+      ],
+      "verification": {
+        "ast_gate": "调用点 3 处 + 方法存在 + round_half_away_from_zero 真被调用",
+        "selftest": "19 项，含 2.5→3 与 numpy 的 2.5→2 不同（证明规则真的换掉了）"
+      },
+      "residual_risk": "仍未运行转换：_static_constant 对真实 TFLite buffer 的行为、以及 FC bias 是否落在主动 i32 策略内，都只能在 P4-B 实测。",
+      "evidence_class": "computed(门禁+自测) + hand_written(设计取舍)"
+    },
+    {
+      "id": "阻断2",
+      "title": "PADV2 证据写入与导出脱节，且 pad_op=True 不是算子编号",
+      "v1_defect": "to_dict 用局部 padv2_evidence 累积，to_msgpack 导出的却是从未更新的 self.padv2_evidence，转换成功也只会写空列表；证据里的 pad_op 字段是布尔值。",
+      "fix": [
+        "证据容器统一到 self.padv2_evidence，to_dict 每次调用开头重置",
+        "证据记录真实身份：op_idx / data_tensor / paddings_tensor / constant_tensor / producer_op_idx / consumer_op_idx / pad_out_tensor / 形状与几何",
+        "写盘时绑定 model_sha256 与 config_sha256、subgraph_range、padv2_count、shared_metadata_tensors",
+        "图中有 PADV2 但证据为空时直接拒绝写盘"
+      ],
+      "verification": {
+        "ast_gate": "to_dict 内不得出现局部 padv2_evidence 赋值；to_msgpack 必须含 self.padv2_evidence 与两个 sha256 字段"
+      },
+      "residual_risk": "证据内容是否与实际转换子图一致，只能在 P4-B 真跑一次转换后核对。",
+      "evidence_class": "computed(门禁) + hand_written(字段设计)"
+    },
+    {
+      "id": "阻断3",
+      "title": "N4 把合法稀疏 ID 误判成缺依赖",
+      "v1_defect": "v1 的 N4 要求初始 tensor_map 含 0..=max_key 的全部键。删掉元数据张量、保留原 ID 本来就会留下合法空洞；尚未执行的层输出也不该作为初始张量存在。而且该拒绝发生在 synthesize 赋值路径，不是加载门禁。",
+      "fix": [
+        "改成加载期校验：initial = 初始张量 ∪ 模型输入；按层推进 available；每层 inp_idxes 必须已可用",
+        "把所有引用（模型输入 / 各层输入 / 最终输出 / commit_before / commit_after）与 initial ∪ produced 对账，缺一个就报出具体 ID",
+        "引用集合存进 ModelCircuit 新字段 referenced_tensor_ids",
+        "tensor_map_to_vec 只对**未被引用**的空洞占位；被引用却落空即 panic",
+        "撤回 v1 的 N5（_smallest_tensor 改名）：v2 里它仍被使用"
+      ],
+      "verification": {
+        "text_gate": "禁止 unwrap_or(smallest_tensor)；必须有 initial_ids/available_ids/produced_ids/referenced_ids；字段三处齐备"
+      },
+      "residual_risk": "新增了 ModelCircuit 字段（model.rs 内，未改 dag.rs 接口）。若 DAG 存在未在 layers 中声明的隐式引用，本检查不覆盖 —— 需 DAG 审计，属另行批准的范围。",
+      "evidence_class": "computed(门禁) + hand_written(接口范围判断)"
+    },
+    {
+      "id": "阻断4",
+      "title": "图保护只覆盖原图，未覆盖实际转换子图与静态元数据",
+      "v1_defect": "P3/P4 用整图 graph.Outputs 判公开输出，但导出模型的公开输出是 layers[-1]['out_idxes']；start_layer/end_layer 可裁掉 ReLU 或让 Pad 输出直接成为公开输出。元数据没有证明是静态常量。缺 rank/[4,2]/非负/正核/stride/shape 检查。共享元数据一律拒绝，过度收紧。",
+      "fix": [
+        "P3/P4 推迟到整段转换结束后按 [start_layer, end_layer] 复检：公开输出用 layers[-1]['out_idxes']，消费者只数子图内的",
+        "P2 额外要求 ReLU 生产者 op_idx >= start_layer（防裁掉 ReLU）",
+        "新增 _static_constant：有 producer 即拒绝（不能冻结零输入 invoke 的结果），Buffer()==0 或 buffer 为空也拒绝",
+        "新增 P0/P1b：paddings 必须 [4,2] 非负整数、batch/channel 轴为 0；核与 stride 必须为正；输入/Pad 输出/Pool 输出三段形状按 NHWC 公式核对",
+        "元数据共享改为按引用位置清理：只从本层 inp_idxes 去掉，别的算子当数据用就仍进 keep_tensors，不误删",
+        "补存活根：模型输入 ∪ 整图输出 ∪ 导出子图公开输出 ∪ 数据依赖"
+      ],
+      "verification": {
+        "ast_gate": "_validate_padv2_subgraph 必须存在且被调用；_static_constant 必须存在"
+      },
+      "residual_risk": "轴顺序按 NHWC 解释；NCHW 模型会被 shape 等式挡住（这是有意的）。整图消费者仍要求恰好 1 个，比只数子图内更保守。",
+      "evidence_class": "computed(门禁) + hand_written(几何与策略)"
+    },
+    {
+      "id": "阻断5",
+      "title": "数值域、k 与 sf 的推导需重写",
+      "v1_defect": "v1 把 loader 精确域写成 [-2^31, 2^31-1]（错，那只是塞得进 i32），并据此断言 k<=32；把 i32 当成唯一有效域；把 sf^2*2^18 当成原 shift 构造的精确边界。",
+      "fix": [
+        "loader 精确域改为 [-2^31, i64::MAX-2^31]，逐分支写清三条",
+        "i32 降级为 I32_POLICY 常量 + 单独错误文案，明说不是必要条件",
+        "删掉 k<=32；改用 k>=5（max_val>=0）、k<=62（-min_val*2 可表示）、global_sf>0，并注明实用上界由资源决定",
+        "S 与 2S 分别 checked；2S 明确写成本保守上界，只有 sf 为 2 的幂时才等价 sf<=2^22，一般 sf 的界是 5931641",
+        "GadgetConfig 的 shift_min_val 改用与 assert 同一条 checked 链算出的值，不再在字面量里重写未检查的乘法",
+        "Max 差值 lookup 域明确为 [0, 2^k-10]（表里是裸无符号）"
+      ],
+      "verification": {
+        "text_gate": "代码里不得出现 k<=32；必须有 i64::MAX-(1i64<<31)、I32_POLICY、checked_mul(sf)、1i128<<17、5931641",
+        "numeric": "全部边界由脚本重算，见 numeric_facts"
+      },
+      "residual_risk": "各 gadget 自己的数值域（ReLU/Div/BiasDiv/Update 等）本批未逐项推；2S 的真实出现位置只从 bias_div 的 2*inp+div_val 形态确认，没有逐个 gadget 复核。",
+      "evidence_class": "computed(门禁+数值重算) + hand_written(保守取舍)"
+    },
+    {
+      "id": "阻断6",
+      "title": "目标窗口长度与全填充负例构造错误",
+      "v1_defect": "v1 把池化窗口长度写成 4/6/9（角/边/内部）并当作本图的归约长度；又把 pad=2,kernel=3 当全填充负例，但它既不必产生全填充窗，也不会被 <kernel 检查拒绝。",
+      "fix": [
+        "明确本图是显式 PADV2 + VALID：padded 尺寸 = H+2，窗口全在内部，归约长度恒为 9；4/6 只作独立长度测试",
+        "全填充负例改用 H=W=1, pad=3, kernel=3, stride=1：首窗全是填充",
+        "P5 的 <kernel 条件保留为必要条件，但说明它只排除 ph>=fh，全填充窗的判定要按具体窗口几何"
+      ],
+      "verification": {
+        "numeric": "H=W=1, pad=3, kernel=3 → padded 7x7，首窗取 [0:3]x[0:3]，其中原图只有 (0,0) 一个真实元素，其余 8 个是填充；window 内真实元素数 = 1 -> 0 填充与 -inf 填充在该窗结果不同"
+      },
+      "residual_risk": "这是纯几何论证，未在 Rust 侧验证；P4-B 用小合成图实测。",
+      "evidence_class": "hand_written(几何论证) + computed(形状公式核对)"
+    }
+  ],
+  "gates": {
+    "converter_ast_gate": {
+      "v2": [],
+      "v1_negative_control": [
+        "[阻断1] self 上调用了不存在的方法: ['_quantize_checked']",
+        "[阻断1] 未定义 _quantize_checked",
+        "[阻断1] _quantize_checked 调用点应为 3 处（主循环/CUSTOM 权重/DIV），实际 1",
+        "[阻断1] round_half_away_from_zero 定义了但没有被调用",
+        "[阻断2] to_dict 里仍有局部 padv2_evidence 赋值",
+        "[阻断2] to_msgpack 缺 model_sha256",
+        "[阻断2] to_msgpack 缺 config_sha256",
+        "[阻断4] 未定义 _validate_padv2_subgraph"
+      ],
+      "computed": true,
+      "kind": "AST（结构级）"
+    },
+    "model_text_gate": {
+      "v2": [],
+      "v1_negative_control": [
+        "[阻断5] 代码里仍出现 k <= 32（v1 的错误结论）",
+        "[阻断5] 代码里没有真实编码上界 i64::MAX - 2^31",
+        "[阻断5] 没有 I32_POLICY 开关，i32 限制会被误当成必要条件",
+        "[阻断5] i32 策略缺少'非必要条件'的说明",
+        "[阻断5] 缺少 1i128 << 17",
+        "[阻断5] 缺少一般 sf 上界 5931641 的说明",
+        "[阻断3] 空洞循环没有引用集合判定",
+        "[阻断3] 仍保留'缺键列表'式的全 ID 连续检查",
+        "[阻断3] 缺少 initial_ids（稀疏 ID / 逐层可用性校验）",
+        "[阻断3] 缺少 available_ids（稀疏 ID / 逐层可用性校验）",
+        "[阻断3] 缺少 produced_ids（稀疏 ID / 逐层可用性校验）",
+        "[阻断3] 缺少 referenced_ids（稀疏 ID / 逐层可用性校验）",
+        "[撤回] 仍有 _smallest_tensor 改名（v2 里它仍被使用）",
+        "referenced_tensor_ids 出现 0 次，少于 struct+字面量+使用点所需的 4 次"
+      ],
+      "computed": true,
+      "kind": "文本/结构级，不是类型检查"
+    }
+  },
+  "selftest": {
+    "exit_code": 0,
+    "pass": 18,
+    "fail": 0,
+    "computed": true,
+    "note": "对 converter 侧数值契约代码的静态自测；不导入 tensorflow、不跑转换"
+  },
+  "numeric_facts": {
+    "loader_exact_domain": {
+      "lo": -2147483648,
+      "hi": 9223372034707292159,
+      "derivation": "F::from((x + 2^31) as u64) - F::from(2^31)：x+2^31 需非负（下界 -2^31）且不溢出 i64（上界 i64::MAX-2^31）",
+      "computed": true
+    },
+    "i32_policy_is_not_necessary": {
+      "i32_range": [
+        -2147483648,
+        2147483647
+      ],
+      "note": "i32 是本项目主动策略；原 loader 在上面的 domain 内全域精确",
+      "computed": true
+    },
+    "sf_bounds": {
+      "S_eq_sf2_2pow17": {
+        "max_sf": 8388607,
+        "computed": true
+      },
+      "twoS_eq_sf2_2pow18": {
+        "max_sf": 5931641,
+        "computed": true,
+        "note": "保守上界，不是原 shift 构造的精确边界"
+      },
+      "power_of_two_sf": {
+        "max_sf": 4194304,
+        "computed": true,
+        "note": "只有 sf 是 2 的幂时 2S 条件才等价于 sf<=2^22"
+      }
+    },
+    "k_bounds": {
+      "num_rows_2powk_minus_9": {
+        "min_k": 4,
+        "computed": true
+      },
+      "max_val_2powk1_minus_10": {
+        "min_k": 5,
+        "computed": true,
+        "note": "k=4 时 max_val = 2^3-10 = -2 < 0"
+      },
+      "minus_min_val_times_2": {
+        "max_k": 62,
+        "computed": true
+      },
+      "conclusion": "k>=5 且 k<=62 是必要条件；实用上界由资源决定，不给出可用 k",
+      "computed": true
+    },
+    "max_difference_lookup": {
+      "domain": "[0, 2^k - 10]",
+      "derivation": "InputLookupChip::load_lookups 用 F::from(i as u64) 填 i in 0..num_rows，num_rows = 2^k - 9，所以表里是裸无符号 0..=2^k-10；Max 的 lookup 是 outp-inp1 / outp-inp2，负差值会成为巨大的域元素而不在表内",
+      "computed": true
+    },
+    "maxchip_host_domain": {
+      "requirement": "-S <= v < 2^64 - S，S = -shift_min_val = sf^2*2^17",
+      "derivation": "convert_to_u64(&(v + min_val_pos)) 要求结果落在 [0, 2^64)",
+      "computed": true
+    }
+  },
+  "max_candidate_unchanged": {
+    "artifact": "patches/max_reduce_fix.rs",
+    "reason": "§2.8.1 判定『两阶段调度值得保留』，本批不改 Max 候选",
+    "note": "行数 11→7 只是调度计数，不能声称 prove 变快",
+    "computed": false
+  },
+  "p4b_matrix_revision": {
+    "window_lengths": {
+      "this_graph": "显式 PADV2 + VALID ⇒ 归约长度恒为 9",
+      "independent_tests": [
+        4,
+        6
+      ],
+      "note": "4/6 是独立长度测试，不是本图 Rust 归约长度"
+    },
+    "full_padding_negative": {
+      "construct": "H=W=1, pad=3, kernel=3, stride=1",
+      "why": "padded 7x7，首窗 3x3 内只有 (0,0) 一个真实元素",
+      "computed": "几何论证 + 形状公式核对"
+    },
+    "sparse_id_cases": [
+      "合法稀疏 ID 正例：删元数据张量后保留原 ID，空洞未被引用 → 加载通过",
+      "真正缺依赖负例：某层 inp_idxes 指向既不初始也不产出的 ID → 报出该 ID",
+      "未来引用负例：某层引用了更晚层才产出的 ID → 报出 layer 号",
+      "共享常量：同一 tensor 既作元数据又作数据 → 保留并仍进 commit"
+    ],
+    "numeric_cases": [
+      "原编码真实边界：-2^31 通过、-2^31-1 拒绝、i64::MAX-2^31 通过、再 +1 拒绝",
+      "主动 i32 策略：单独开关，关掉后同一值按 i64 域通过",
+      "舍入半点：2.5→3、-2.5→-3（与 numpy half-to-even 明确不同）",
+      "scale 零/负：必须拒绝（global_sf>0）",
+      "Max 差值上界：2^k-10 通过、2^k-10+1 拒绝"
+    ],
+    "big_k_warning": "k=32 与大 scale 只允许做不建表的纯配置边界检查；禁止运行 k32 configure/MockProver"
+  },
+  "not_concluded": [
+    "「六项阻断已闭环」——只做了静态修复与静态门禁；未编译、未运行",
+    "「Max 已修复」——候选未变，仍未编译",
+    "「PADV2 补丁可采纳」——拒绝条件与子图复检写好了，但没在本图跑过一次转换",
+    "「N4 已验证」——加载期校验没有在 MNIST 既有产物上跑过",
+    "任何关于目标规模、prove 时间、1s 目标的判断"
+  ],
+  "reproduce": [
+    "python scripts/p4a_make_converter_patch_v2.py",
+    "python scripts/p4a_make_model_patch_v2.py",
+    "python scripts/p4a_quant_selftest.py",
+    "python scripts/p4a_manifest_v2.py --check"
+  ]
+}
