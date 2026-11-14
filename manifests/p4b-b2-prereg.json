@@ -1,0 +1,107 @@
+{
+  "batch": "P4-B.2 扩展（预登记）",
+  "date": "2026-11-15",
+  "status": "registered_not_executed",
+  "note": "本文件是执行前的预登记清单。运行结果另存 logs/p4b/，不得回改本文件的预期值。",
+  "identity": {
+    "old_test": "local_bins/p4b_max_test.rs (49b6337e…) 原样保留，27/27 结论不回改",
+    "new_test": "local_bins/p4b_max_test_v2.rs（待写）",
+    "remote_bin": "src/bin/p4b_max_test_v2.rs",
+    "reuse_old_result": false
+  },
+  "matrix_a_max_independent": {
+    "columns": [3, 6, 9, 12],
+    "column_note": "9 列（G=3）是新增档；旧测试只有 3/6/12",
+    "vectors": [
+      {"id": "L1", "data": [0], "n": 1},
+      {"id": "L2", "data": [5, 1], "n": 2},
+      {"id": "L3", "data": [1, 2, 3], "n": 3},
+      {"id": "L4", "data": [3, 1, 2, 3], "n": 4, "note": "并列最大在 0 与 3"},
+      {"id": "L5", "data": [-5, -1, -3, -16, 0], "n": 5, "note": "混合含负"},
+      {"id": "L6", "data": [1, 5, 2, 4, 3, 0], "n": 6},
+      {"id": "L7", "data": [7, 1, 2, 3, 4, 5, 6], "n": 7},
+      {"id": "L8", "data": [0, 1, 2, 3, 4, 5, 6, 7], "n": 8},
+      {"id": "P0", "data": [9, 0, 0, 0, 0, 0, 0, 0, 0], "n": 9},
+      {"id": "P1", "data": [0, 9, 0, 0, 0, 0, 0, 0, 0], "n": 9},
+      {"id": "P2", "data": [0, 0, 9, 0, 0, 0, 0, 0, 0], "n": 9},
+      {"id": "P3", "data": [0, 0, 0, 9, 0, 0, 0, 0, 0], "n": 9},
+      {"id": "P4", "data": [0, 0, 0, 0, 9, 0, 0, 0, 0], "n": 9},
+      {"id": "P5", "data": [0, 0, 0, 0, 0, 9, 0, 0, 0], "n": 9},
+      {"id": "P6", "data": [0, 0, 0, 0, 0, 0, 9, 0, 0], "n": 9},
+      {"id": "P7", "data": [0, 0, 0, 0, 0, 0, 0, 9, 0], "n": 9},
+      {"id": "P8", "data": [0, 0, 0, 0, 0, 0, 0, 0, 9], "n": 9},
+      {"id": "T1", "data": [3, 3, 3, 3, 3, 3, 3, 3, 3], "n": 9, "note": "全等"},
+      {"id": "T2", "data": [0, 0, 0, 0, 0, 0, 0, 0, 0], "n": 9, "note": "全零"},
+      {"id": "T3", "data": [-1, -2, -3, -4, -5, -6, -7, -8, -9], "n": 9, "note": "全负，max=-1"},
+      {"id": "T4", "data": [1, 9, 0, 0, 9, 0, 0, 0, 0], "n": 9, "note": "双峰"}
+    ],
+    "arms": {
+      "positive": "instance = host max(vector)，预期 verify()==Ok",
+      "negative": "instance = host max + 1，预期 verify()!=Ok",
+      "pass_rule": "正臂通过 且 负臂被拒，才记该组合 PASS"
+    },
+    "runs": 168,
+    "runs_formula": "21 向量 x 4 列数 x 2 臂"
+  },
+  "matrix_b_numeric_boundary": {
+    "why_separate_config": "shift=+64 时 (-shift) as u64 = 2^64-64，宿主不溢出要求 v<=63；而查表是 [0,999]，测 999/1000 边界必然 v>63 会先撞 convert_to_u64 单 limb 上限。故边界必须换 shift。",
+    "config": {"shift_min_val": 1024, "num_rows": 1000, "num_cols": 6, "k": 12},
+    "cases": [
+      {"id": "B1", "data": [0, 999], "expected": "PASS", "stage": null},
+      {"id": "B2", "data": [0, 1000], "expected": "REJECT", "stage": "lookup_constraint"},
+      {"id": "B3", "data": [0, 1024], "expected": "REJECT", "stage": "host_panic"},
+      {"id": "B4", "data": [1000, 1000], "expected": "PASS", "stage": null}
+    ],
+    "failure_taxonomy": ["layout_or_configure", "host_panic", "constraint_reject"],
+    "pass_rule": "只有与预登记 stage 一致的失败才记负例通过；B2 若为 panic、B3 若为约束拒绝，均记 FAIL 并停",
+    "runs": 4
+  },
+  "matrix_c_rejection": {
+    "empty_input": {
+      "data": [],
+      "expected": "REJECT",
+      "stage": "synthesize",
+      "detail": "MaxChip::forward 返回 Err(Error::Synthesis)",
+      "runs": 4,
+      "columns": [3, 6, 9, 12]
+    },
+    "illegal_columns": {
+      "cases": [4, 5, 7, 2, 0],
+      "expected": "PANIC",
+      "must_reach": "MaxChip::configure 的 assert（len%3==0 或 len>=3）",
+      "anti_pattern": "不得由测试驱动的 unsupported num_cols 分支拒绝",
+      "impl": "新增 MaxTestRaw<N>，configure 内直接以 N 列调 MaxChip::configure；catch_unwind 断言 panic 文本",
+      "expected_message_fragments": ["multiple of 3", "at least 3"],
+      "runs": 5
+    },
+    "runs_total": 9
+  },
+  "matrix_d_pad_to_max": {
+    "included": false,
+    "reason": "需要 PadChip+MaxChip 合成电路或 msgpack 模型；按用户要求与 A/B/C 分列",
+    "distinctions": ["Rust 组合通过", "Python 图保护通过", "真实 TFLite 转换通过"],
+    "distinction_note": "三者不可互相替代，需分别记录"
+  },
+  "totals": {"runs": 181, "budget": "预计 <60 s，峰值 RSS <1 GiB"},
+  "stop_conditions": [
+    "任一正臂失败 → 立即停",
+    "任一预登记负例被接受 → 立即停",
+    "负例在错误阶段被拒 → 记 FAIL 并停，不记通过",
+    "panic 类型与预登记不符 → 记 FAIL",
+    "需改候选代码才能继续 → 停，另立版本",
+    "累计失败 >3 → 停"
+  ],
+  "run_scope": {
+    "build": "cargo build --offline --locked -j 4 --bin p4b_max_test_v2",
+    "run": "./target/debug/p4b_max_test_v2",
+    "reuse_toolchain_cache_target": true,
+    "no_dependency_download": true,
+    "no_lockfile_update": true,
+    "not_run": ["converter", "真实 TFLite 转换", "目标模型", "SRS", "prove/verify"]
+  },
+  "pending_confirmation": [
+    "矩阵规模 181 次是否接受",
+    "子矩阵 D 是否留到 B.3 或另立一批",
+    "是否允许 catch_unwind 作为区分宿主 panic 与约束拒绝的手段"
+  ]
+}

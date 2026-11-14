@@ -92,7 +92,7 @@
       },
       "did_recheck_crate": true,
       "did_recheck_evidence": "日志含 `Checking zkml v0.0.1 (...)`，非缓存命中",
-      "warnings_vs_v4": "14 条，与 v4 那次逐条 diff 完全一致，无新增",
+      "warnings_vs_v4": "具体警告诊断 10 条（另有 4 条 `generated … warnings` 汇总行，属重复计数，不计入）；去掉汇总行后排序比对与 v4 那次集合一致、无新增；两次输出顺序不同，不作原文逐条比对。",
       "log": "logs/p4b/b6-model-v5-check.log",
       "log_sha256_prefix": "4a8049151f12922b",
       "recorded_conclusion": "model v5 在上述 Max/model/Pad 源码组合下，通过本次离线锁定依赖的类型与借用检查。",
