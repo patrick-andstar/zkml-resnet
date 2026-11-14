@@ -1,0 +1,168 @@
+{
+  "kind": "pre_registered_acceptance_tolerance",
+  "written_before_conversion": true,
+  "written_utc": "2026-11-14T12:40:26Z",
+  "context": "FP32 PyTorch -> FP32 TFLite. Differences come only from op reordering and fused arithmetic; any padding/transpose/layout mistake produces errors of order 1e-1..1e1 on logits whose own range is about [-10, 10].",
+  "thresholds_logits": {
+    "pass": {
+      "max_abs_le": 0.001,
+      "argmax_identical": true
+    },
+    "pass_with_note": {
+      "max_abs_le": 0.01,
+      "argmax_identical": true
+    },
+    "fail": {
+      "max_abs_gt": 0.01,
+      "or": "argmax differs on any input"
+    }
+  },
+  "report_only": [
+    "rmse",
+    "per_input_max_abs"
+  ],
+  "rule": "Thresholds are fixed now. If the result lands in pass_with_note the number is reported as-is with a note; the thresholds are not relaxed afterwards, and a fail is not retried with a looser bound.",
+  "model": {
+    "family": "torchvision resnet18",
+    "classes": 1000,
+    "weights": "ResNet18_Weights.IMAGENET1K_V1",
+    "checkpoint_sha256": "f37072fd47e89c5e827621c5baffa7500819f7896bbacec160b1a16c560e07ec",
+    "param_count": 11689512,
+    "eval_mode": true,
+    "input_shape": [
+      1,
+      3,
+      128,
+      128
+    ]
+  },
+  "inputs": {
+    "real_dog": {
+      "path": "/root/autodl-tmp/zkml-repro/assets/p3-inputs/real_dog.npy",
+      "shape": [
+        1,
+        3,
+        128,
+        128
+      ],
+      "dtype": "float32",
+      "bytes": 196736,
+      "sha256": "b03cdd3b91b83281cd3d55bcaedbc75f0d40d7ac148a6c344c90a1da7b0d01bf",
+      "min": -2.0836544036865234,
+      "max": 2.640000104904175
+    },
+    "zeros": {
+      "path": "/root/autodl-tmp/zkml-repro/assets/p3-inputs/zeros.npy",
+      "shape": [
+        1,
+        3,
+        128,
+        128
+      ],
+      "dtype": "float32",
+      "bytes": 196736,
+      "sha256": "f48685eec604b4b3806e86f6cbb2913fa917ef1a5c3e1907095bf2e51a27fd29",
+      "min": 0.0,
+      "max": 0.0
+    },
+    "neg_const": {
+      "path": "/root/autodl-tmp/zkml-repro/assets/p3-inputs/neg_const.npy",
+      "shape": [
+        1,
+        3,
+        128,
+        128
+      ],
+      "dtype": "float32",
+      "bytes": 196736,
+      "sha256": "afd535a518def1c7fcda56036bd471ebc85025a85629a70db6bf01f0a893af26",
+      "min": -1.5,
+      "max": -1.5
+    },
+    "noise_seed1234": {
+      "path": "/root/autodl-tmp/zkml-repro/assets/p3-inputs/noise_seed1234.npy",
+      "shape": [
+        1,
+        3,
+        128,
+        128
+      ],
+      "dtype": "float32",
+      "bytes": 196736,
+      "sha256": "671e5d5ddcfe4fce9c94aba20d14f76627601e3a06e20cfd62d03cca97b8bd88",
+      "min": -2.999911308288574,
+      "max": 2.9999935626983643
+    },
+    "half_split": {
+      "path": "/root/autodl-tmp/zkml-repro/assets/p3-inputs/half_split.npy",
+      "shape": [
+        1,
+        3,
+        128,
+        128
+      ],
+      "dtype": "float32",
+      "bytes": 196736,
+      "sha256": "2e1807c318b8bf7c0570377f390a45824d697e09e5795e16c992b09b45e04b2d",
+      "min": -2.0,
+      "max": 2.0
+    }
+  },
+  "reference_logits": {
+    "real_dog": {
+      "path": "/root/autodl-tmp/zkml-repro/assets/p3-inputs/ref_real_dog.npy",
+      "sha256": "084cab284e2a048329aa707c78a30aaebc96937aa30a9b6e23f2738640aa373b",
+      "shape": [
+        1,
+        1000
+      ],
+      "top1": 258,
+      "logit_max": 23.9072265625,
+      "logit_min": -11.197627067565918
+    },
+    "zeros": {
+      "path": "/root/autodl-tmp/zkml-repro/assets/p3-inputs/ref_zeros.npy",
+      "sha256": "d2d5e1cd17ff98ebe6780ad23841e260d24c5ef5873ebdf89134e21630867e97",
+      "shape": [
+        1,
+        1000
+      ],
+      "top1": 892,
+      "logit_max": 3.7751121520996094,
+      "logit_min": -2.7866568565368652
+    },
+    "neg_const": {
+      "path": "/root/autodl-tmp/zkml-repro/assets/p3-inputs/ref_neg_const.npy",
+      "sha256": "5e26e91f4d7ce297f5aa279bd751536e3e1694ad8436f864ad103bf0e367d3d7",
+      "shape": [
+        1,
+        1000
+      ],
+      "top1": 644,
+      "logit_max": 4.185830116271973,
+      "logit_min": -2.7568485736846924
+    },
+    "noise_seed1234": {
+      "path": "/root/autodl-tmp/zkml-repro/assets/p3-inputs/ref_noise_seed1234.npy",
+      "sha256": "2fcde3c9389be52c609a73d3d78461ed36c87e305e19802547d9b5e12126944a",
+      "shape": [
+        1,
+        1000
+      ],
+      "top1": 971,
+      "logit_max": 11.94013500213623,
+      "logit_min": -5.356386661529541
+    },
+    "half_split": {
+      "path": "/root/autodl-tmp/zkml-repro/assets/p3-inputs/ref_half_split.npy",
+      "sha256": "224752841cd5c05cf701cdf7ac9ca8326e160e5a77e6a7a925bf76317ca9a170",
+      "shape": [
+        1,
+        1000
+      ],
+      "top1": 916,
+      "logit_max": 4.084584712982178,
+      "logit_min": -2.9517416954040527
+    }
+  }
+}

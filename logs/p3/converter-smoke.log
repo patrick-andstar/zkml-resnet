@@ -1,0 +1,15 @@
+/root/autodl-tmp/zkml-repro/env/py-export/lib/python3.11/site-packages/ai_edge_litert/interpreter.py:480: UserWarning: Warning: Enabling `experimental_preserve_all_tensors` with the BUILTIN or AUTO op resolver is intended for debugging purposes only. Be aware that this can significantly increase memory usage by storing all intermediate tensors. If you encounter memory problems or are not actively debugging, consider disabling this option.
+  warnings.warn(
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+Traceback (most recent call last):
+  File "/root/autodl-tmp/zkml-repro/src/python/converter.py", line 549, in <module>
+    main()
+  File "/root/autodl-tmp/zkml-repro/src/python/converter.py", line 536, in main
+    model_packed, config_packed = converter.to_msgpack(
+                                  ^^^^^^^^^^^^^^^^^^^^^
+  File "/root/autodl-tmp/zkml-repro/src/python/converter.py", line 501, in to_msgpack
+    d = self.to_dict(start_layer, end_layer)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/autodl-tmp/zkml-repro/src/python/converter.py", line 400, in to_dict
+    raise NotImplementedError('Unsupported operator at layer {}: {}, {}'.format(op_idx, op_code, op_name))
+NotImplementedError: Unsupported operator at layer 2: 60, PADV2

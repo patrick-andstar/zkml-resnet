@@ -1,0 +1,148 @@
+{
+  "started_utc": "2026-11-14T12:42:08Z",
+  "route": "torchvision resnet18 -> torch.export -> litert_torch.convert -> .tflite (FP32)",
+  "prereg_file": "/root/autodl-tmp/zkml-repro/assets/p3-prereg.json",
+  "prereg_thresholds": {
+    "pass": {
+      "max_abs_le": 0.001,
+      "argmax_identical": true
+    },
+    "pass_with_note": {
+      "max_abs_le": 0.01,
+      "argmax_identical": true
+    },
+    "fail": {
+      "max_abs_gt": 0.01,
+      "or": "argmax differs on any input"
+    }
+  },
+  "torch": "2.14.1+cpu",
+  "torchvision": "0.29.1+cpu",
+  "litert_torch": "0.10.0",
+  "attempts": [
+    {
+      "name": "default_nchw_io",
+      "seconds": 5.61,
+      "path": "/root/autodl-tmp/zkml-repro/assets/p3-model-nchw-io.tflite",
+      "bytes": 46776576,
+      "sha256": "bb609776b55a0dd080b72825536f4c970e83bf1bada6e21c4066d25ba0b30634",
+      "io": {
+        "input": {
+          "name": "serving_default_args_0",
+          "shape": [
+            1,
+            3,
+            128,
+            128
+          ],
+          "dtype": "<class 'numpy.float32'>"
+        },
+        "output": {
+          "name": "serving_default_output_0_output",
+          "shape": [
+            1,
+            1000
+          ],
+          "dtype": "<class 'numpy.float32'>"
+        }
+      },
+      "accepted": false,
+      "why_not_accepted": "I/O is NCHW; the repo's own TFLite artefacts use NHWC, so this model would not be drop-in for the existing converter/circuit path"
+    },
+    {
+      "name": "channel_last_io",
+      "seconds": 5.34,
+      "path": "/root/autodl-tmp/zkml-repro/assets/p3-model.tflite",
+      "bytes": 46789576,
+      "sha256": "4014a8b4cde23d61e328114cf67a2247a766e812b2195d820a49fc13dd4cb4a1",
+      "io": {
+        "input": {
+          "name": "serving_default_args_0",
+          "shape": [
+            1,
+            128,
+            128,
+            3
+          ],
+          "dtype": "<class 'numpy.float32'>"
+        },
+        "output": {
+          "name": "serving_default_output_0_output",
+          "shape": [
+            1,
+            1000
+          ],
+          "dtype": "<class 'numpy.float32'>"
+        }
+      },
+      "accepted": true
+    }
+  ],
+  "checkpoint_sha256": "f37072fd47e89c5e827621c5baffa7500819f7896bbacec160b1a16c560e07ec",
+  "aten_op_histogram": {
+    "aten.adaptive_avg_pool2d.default": 1,
+    "aten.add_.Tensor": 8,
+    "aten.batch_norm.default": 20,
+    "aten.conv2d.default": 20,
+    "aten.flatten.using_ints": 1,
+    "aten.linear.default": 1,
+    "aten.max_pool2d.default": 1,
+    "aten.permute.default": 1,
+    "aten.relu_.default": 17
+  },
+  "per_input": {
+    "real_dog": {
+      "max_abs": 3.4332275390625e-05,
+      "mean_abs": 4.617478232830763e-06,
+      "rmse": 6.2650987478428945e-06,
+      "ref_top1": 258,
+      "tfl_top1": 258,
+      "argmax_identical": true
+    },
+    "zeros": {
+      "max_abs": 1.1682510375976562e-05,
+      "mean_abs": 3.1446275825146587e-06,
+      "rmse": 3.942340470354916e-06,
+      "ref_top1": 892,
+      "tfl_top1": 892,
+      "argmax_identical": true
+    },
+    "neg_const": {
+      "max_abs": 6.4373016357421875e-06,
+      "mean_abs": 1.6670178156346083e-06,
+      "rmse": 2.086751680884652e-06,
+      "ref_top1": 644,
+      "tfl_top1": 644,
+      "argmax_identical": true
+    },
+    "noise_seed1234": {
+      "max_abs": 6.67572021484375e-06,
+      "mean_abs": 1.5734720218461007e-06,
+      "rmse": 1.963967502651014e-06,
+      "ref_top1": 971,
+      "tfl_top1": 971,
+      "argmax_identical": true
+    },
+    "half_split": {
+      "max_abs": 1.3947486877441406e-05,
+      "mean_abs": 3.122278896626085e-06,
+      "rmse": 3.9518805627494164e-06,
+      "ref_top1": 916,
+      "tfl_top1": 916,
+      "argmax_identical": true
+    }
+  },
+  "worst": "real_dog: 3.433e-05",
+  "verdict": "PASS",
+  "argmax_mismatch_inputs": [],
+  "inputs_above_pass_threshold": [],
+  "layout_negative_control": {
+    "max_abs": 22.284921646118164,
+    "mean_abs": 4.022098653952125,
+    "rmse": 5.214922480596995,
+    "ref_top1": 258,
+    "bad_top1": 825,
+    "note": "reshape instead of transpose; expected to be far worse than the pass threshold"
+  },
+  "finished_utc": "2026-11-14T12:42:20Z"
+}

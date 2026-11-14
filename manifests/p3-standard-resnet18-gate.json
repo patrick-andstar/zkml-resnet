@@ -1,0 +1,289 @@
+{
+  "schema": "zkml-repro/p3-gate",
+  "version": "1.0",
+  "created_utc": "2026-11-14T12:50:57Z",
+  "stage": "P3",
+  "title": "标准 ResNet-18 的语义与转换门禁",
+  "scope_note": "只覆盖 PyTorch -> TFLite 的浮点导出与静态算子/布局检查，以及仓库 converter.py 的可消费性实测。不含定点误差、k/scale 选型、SRS、prove、verify。",
+
+  "env": {
+    "python": "3.11.18 (conda, /root/autodl-tmp/zkml-repro/env/py-export)",
+    "torch": "2.14.1+cpu",
+    "torchvision": "0.29.1+cpu",
+    "litert_torch": "0.10.0",
+    "ai_edge_litert": "2.3.0",
+    "tflite": "2.18.0",
+    "tensorflow": "not installed; a 12-line shim forwards tf.lite.Interpreter to ai-edge-litert for running converter.py unmodified",
+    "shim_path": "env/shim/tensorflow.py",
+    "shim_risk": "not official TensorFlow; any later behaviour discrepancy must be re-checked against real TF",
+    "disk_free_after": "46G of 50G on /root/autodl-tmp"
+  },
+
+  "model_identity": {
+    "family": "torchvision.models.resnet18",
+    "classes": 1000,
+    "weights": "ResNet18_Weights.IMAGENET1K_V1",
+    "checkpoint_sha256": "f37072fd47e89c5e827621c5baffa7500819f7896bbacec160b1a16c560e07ec",
+    "param_count": 11689512,
+    "eval_mode": true,
+    "input_shape_nchw": [1, 3, 128, 128],
+    "output_shape": [1, 1000],
+    "identity_boundary": "独立基线：标准 torchvision 官方权重 + 明确预处理。未访问被禁止的旧项目目录，因此不声称与 ZKTorch 路线完全同模型同输入。"
+  },
+
+  "inputs": {
+    "count": 5,
+    "items": {
+      "real_dog": {"desc": "真实 JPEG 缩放到 128x128", "range": [-2.0837, 2.6400], "sha256": "b03cdd3b91b83281cd3d55bcaedbc75f0d40d7ac148a6c344c90a1da7b0d01bf", "ref_top1": 258},
+      "zeros": {"desc": "全 0", "range": [0.0, 0.0], "sha256": "f48685eec604b4b3806e86f6cbb2913fa917ef1a5c3e1907095bf2e51a27fd29", "ref_top1": 892},
+      "neg_const": {"desc": "全 -1.5，负值边界", "range": [-1.5, -1.5], "sha256": "afd535a518def1c7fcda56036bd471ebc85025a85629a70db6bf01f0a893af26", "ref_top1": 644},
+      "noise_seed1234": {"desc": "高斯噪声 seed=1234", "range": [-2.9999, 3.0000], "sha256": "671e5d5ddcfe4fce9c94aba20d14f76627601e3a06e20cfd62d03cca97b8bd88", "ref_top1": 971},
+      "half_split": {"desc": "左半 +2 / 右半 -2，空间边界", "range": [-2.0, 2.0], "sha256": "2e1807c318b8bf7c0570377f390a45824d697e09e5795e16c992b09b45e04b2d", "ref_top1": 916}
+    },
+    "reference_logits_stored": true,
+    "reference_logits_dir": "assets/p3-inputs/ref_*.npy"
+  },
+
+  "conversion": {
+    "route": "torchvision resnet18 -> torch.export -> litert_torch.convert -> .tflite (FP32)",
+    "attempts": [
+      {
+        "name": "default_nchw_io",
+        "path": "assets/p3-model-nchw-io.tflite",
+        "bytes": 46776576,
+        "sha256": "bb609776b55a0dd080b72825536f4c970e83bf1bada6e21c4066d25ba0b30634",
+        "io": {"input": [1, 3, 128, 128], "output": [1, 1000]},
+        "accepted": false,
+        "reason": "I/O 为 NCHW，仓库自带 TFLite 产物为 NHWC，不是 drop-in"
+      },
+      {
+        "name": "channel_last_io",
+        "path": "assets/p3-model.tflite",
+        "bytes": 46789576,
+        "sha256": "4014a8b4cde23d61e328114cf67a2247a766e812b2195d820a49fc13dd4cb4a1",
+        "io": {"input": [1, 128, 128, 3], "output": [1, 1000]},
+        "accepted": true,
+        "api": "litert_torch.to_channel_last_io(module, args=[0])"
+      }
+    ],
+    "known_warnings": [
+      "Your model is converted in training mode —— to_channel_last_io 的 wrapper 丢掉 eval 状态；不是「已确保 eval」的证据，BN 折叠正确性由数值门禁回答",
+      "aten.permute 出现在导出图里但 TFLite 无 TRANSPOSE 算子 —— 由 channel-last 改写消解；正确性由数值门禁 + 布局负向对照背书"
+    ]
+  },
+
+  "numerical_gate": {
+    "prereg_file": "assets/p3-prereg.json",
+    "prereg_sha256": "2a898d0c1a7e1d55c6c37c1970661373e7cdb12ee10c4c804713b59a499e9972",
+    "prereg_written_utc": "2026-11-14T12:40:26Z",
+    "conversion_started_utc": "2026-11-14T12:42:08Z",
+    "prereg_before_conversion": true,
+    "thresholds": {
+      "pass": {"max_abs_le": 0.001, "argmax_identical": true},
+      "pass_with_note": {"max_abs_le": 0.01, "argmax_identical": true},
+      "fail": {"max_abs_gt": 0.01, "or": "argmax differs on any input"}
+    },
+    "thresholds_relaxed_afterwards": false,
+    "per_input": {
+      "real_dog": {"max_abs": 3.4332275390625e-05, "rmse": 6.2650987478428945e-06, "top1_ref": 258, "top1_tfl": 258},
+      "zeros": {"max_abs": 1.1682510375976562e-05, "rmse": 3.942340470354916e-06, "top1_ref": 892, "top1_tfl": 892},
+      "neg_const": {"max_abs": 6.4373016357421875e-06, "rmse": 2.086751680884652e-06, "top1_ref": 644, "top1_tfl": 644},
+      "noise_seed1234": {"max_abs": 6.67572021484375e-06, "rmse": 1.963967502651014e-06, "top1_ref": 971, "top1_tfl": 971},
+      "half_split": {"max_abs": 1.3947486877441406e-05, "rmse": 3.9518805627494164e-06, "top1_ref": 916, "top1_tfl": 916}
+    },
+    "worst_input": "real_dog",
+    "worst_max_abs": 3.4332275390625e-05,
+    "argmax_mismatch_inputs": [],
+    "verdict": "PASS",
+    "layout_negative_control": {
+      "method": "reshape 代替 transpose",
+      "max_abs": 22.284921646118164,
+      "top1_correct": 258,
+      "top1_wrong": 825,
+      "ratio_vs_pass_threshold": 22285,
+      "conclusion": "门禁对布局错误灵敏，PASS 有意义"
+    }
+  },
+
+  "operator_audit": {
+    "script": "scripts/p3_opaudit.py",
+    "report": "assets/p3-opaudit.json",
+    "n_ops": 36,
+    "n_tensors": 83,
+    "tensor_dtypes": {"FLOAT32": 80, "INT32": 3},
+    "histogram": {"CONV_2D": 20, "ADD": 8, "PAD": 4, "PADV2": 1, "MAX_POOL_2D": 1, "MEAN": 1, "FULLY_CONNECTED": 1},
+    "aten_histogram": {
+      "aten.conv2d.default": 20,
+      "aten.batch_norm.default": 20,
+      "aten.relu_.default": 17,
+      "aten.add_.Tensor": 8,
+      "aten.max_pool2d.default": 1,
+      "aten.adaptive_avg_pool2d.default": 1,
+      "aten.linear.default": 1,
+      "aten.permute.default": 1,
+      "aten.flatten.using_ints": 1
+    },
+    "checks_total": 19,
+    "checks_passed": 19,
+    "checks": [
+      {"id": "C1", "what": "I/O NHWC FP32 [1,128,128,3]->[1,1000]", "ok": true},
+      {"id": "C2", "what": "无 int8/uint8 量化", "ok": true},
+      {"id": "C3", "what": "stride2 卷积：核>1 为 VALID + 显式 pad=k//2；核=1 无 pad", "ok": true},
+      {"id": "C4", "what": "stem 7x7 用显式 PAD=3（SAME 只给 pad_before=2）", "ok": true},
+      {"id": "C5", "what": "maxpool 3x3/s2 = 显式 PAD(1) + VALID + 无 fused act", "ok": true},
+      {"id": "C6", "what": "stride1 3x3 全 SAME、无显式 pad、核为奇数", "ok": true},
+      {"id": "C7", "what": "所有卷积 dilation=1", "ok": true},
+      {"id": "C8", "what": "无独立 ReLU op", "ok": true},
+      {"id": "C9", "what": "ReLU 融合点 9(conv)+8(add)=17", "ok": true},
+      {"id": "C10", "what": "8 个残差 ADD 两侧同形、无广播", "ok": true},
+      {"id": "C11", "what": "MEAN axes={1,2}，[1,4,4,512]->[1,512]", "ok": true},
+      {"id": "C12", "what": "FC 权重 [1000,512]、无激活", "ok": true},
+      {"id": "C13", "what": "无 CUSTOM / 控制流算子", "ok": true},
+      {"id": "C14", "what": "填充值语义：PAD=0；maxpool 前 PADV2=-inf", "ok": true},
+      {"id": "C14b", "what": "每个显式填充量 = 相邻核 k//2", "ok": true},
+      {"id": "C15", "what": "0 填充语义安全（maxpool 处为 -inf，另有 ReLU 非负作双保险）", "ok": true},
+      {"id": "C16", "what": "TRANSPOSE 记录项 = 0 个（记录项，非判据）", "ok": true, "is_record_only": true},
+      {"id": "C17", "what": "CONV_2D=20（1 stem+16 block+3 downsample），无 depthwise", "ok": true},
+      {"id": "C18", "what": "无 BN 残留算子", "ok": true}
+    ],
+    "all_ok": true,
+    "key_finding": "maxpool 的填充是 PADV2 且常量 = -inf，与 PyTorch MaxPool2d 的 -inf 填充完全一致；SAME 在 TFLite 层面根本不出现。",
+    "window_alignment": {
+      "stem_7x7_s2_pad3": "pad3 后 128->134，floor((134-7)/2)+1=64；窗口 j 覆盖原图 [2j-3, 2j+3]；若用 SAME 则 pad_total=5 前2后3，左边界少 1 像素",
+      "stride2_3x3_pad1": "pad1 后 32->34，floor((34-3)/2)+1=16；窗口 j 覆盖 [2j-1, 2j+1]；SAME 会给 pad_total=1 前0后1，错位",
+      "stride2_1x1": "无 pad，32->16；有 pad 会白拿一圈 0 并改尺寸",
+      "maxpool_3x3_s2_pad1": "pad1 后 64->66，floor((66-3)/2)+1=32；窗口 j 覆盖 [2j-1, 2j+1]；填充值 -inf 与 PyTorch 相同"
+    }
+  },
+
+  "converter_compatibility": {
+    "repo_file": "src/python/converter.py",
+    "unmodified_run": {
+      "exit_code": 1,
+      "log": "logs/p3/converter-smoke.log",
+      "error": "NotImplementedError: Unsupported operator at layer 2: 60, PADV2",
+      "produced_artifacts": "none",
+      "what_was_NOT_the_cause": [
+        "MAX_POOL_2D 的 SAME 拒绝未触发：本模型 padding=VALID，converter.py:161-162 的判断被跳过",
+        "CONV_2D 的 VALID 被正常接受：op0/op1 已通过，说明「显式 PAD + VALID」形态 converter 认"
+      ],
+      "what_was_the_cause": "converter.py 只有 PAD 分支，没有 PADV2 分支"
+    },
+    "minimal_patch_probe": {
+      "approach": "不改仓库文件：脚本读源码、在 PAD 分支前插入 8 行、写出 patches/converter_p3_padv2.py 并打印插入片段",
+      "generated_file": "patches/converter_p3_padv2.py",
+      "generated_file_sha256": "c6bb8e8d19f15e749e89386ab211062698cbf87a03accdaa9f7d72411054439b",
+      "exit_code_after_patch": 0,
+      "n_layers": 36,
+      "n_tensors": 46,
+      "msgpack_model": {"path": "logs/p3/patched-model.msgpack", "bytes": 33441970, "sha256": "74bc3f77f772c4e9883a1d6545521b92d1fe564af24f8e4ff635b18b1833f6a5"},
+      "msgpack_config": {"path": "logs/p3/patched-config.msgpack", "bytes": 3958, "sha256": "d23276b52ecc5479226d95a13e788c70c17d6500f3ae9fba4c62397cc9fa917d"},
+      "smoke_only_config": {
+        "global_sf": 65536,
+        "k": 19,
+        "num_cols": 6,
+        "num_random": 20001,
+        "use_selectors": true,
+        "commit": false,
+        "note": "全部是 converter.py 默认值，只为跑通流程；不是 P4 选型结论，不构成资源预算"
+      }
+    },
+    "semantic_degradation": {
+      "severity": "must-disclose",
+      "what": "Rust PadChip 把填充值硬编码为常量 0（src/layers/shape/pad.rs: `constants.get(&0)`），而本模型 PADV2 常量是 -inf",
+      "equivalence_condition": "max(x ∪ {0}) = max(x) 当且仅当 max(x) >= 0",
+      "why_it_holds_here": "该 PADV2 的输入是 conv1+BN+ReLU 的输出，逐元素 >= 0；生产者 CONV_2D 的 fused_activation=RELU，审计 C15 已记录该证据",
+      "why_it_is_not_general": "这是本图的性质，不是 PadChip 的通用性质；maxpool 前没有 ReLU 的模型用同样补丁会算错",
+      "recommended_patch_shape": [
+        "补 PADV2 分支，只取 paddings（按 PAD 处理）",
+        "不要把 PADV2 的常量张量放进 keep_tensors",
+        "加断言：常量是 -inf 且输入不是 ReLU 之后的张量时直接报错，不静默降级"
+      ]
+    },
+    "dead_constant_hazard": {
+      "what": "converter.py 对 FLOAT32 常量做 (x*scale).round().astype(int64)，-inf 变成 INT64_MIN",
+      "evidence": {"tensor_idx": 1, "shape": [1], "value": -9223372036854775808},
+      "impact_now": "Pad 层不读它，本批结论不受影响",
+      "impact_later": "任何按张量做定点范围检查或分配 cell 的下游步骤都可能被干扰"
+    }
+  },
+
+  "crosscheck": {
+    "script": "scripts/p3_crosscheck.py",
+    "report": "assets/p3-crosscheck.json",
+    "n_ops": 36,
+    "n_layers": 36,
+    "structure_match": true,
+    "compared": [
+      "算子类型映射",
+      "输出形状逐层完全相等（36/36）",
+      "参数逐项对应：Conv2D=[0,pad,act,sH,sW]、MaxPool2D=[kh,kw,sH,sW]、Add=[act]、Mean=axes、FullyConnected=[act]、Pad=paddings"
+    ],
+    "direction_check": "TFLite Padding 枚举 SAME=0/VALID=1；Rust PaddingEnum Same=0/Valid=1（layers/conv2d.rs:62-64），方向一致。若相反会静默翻转全网络 padding 而形状链仍「看起来对」。",
+    "rust_side_facts": {
+      "MaxPool2DChip": "形状计算固定 PaddingEnum::Valid（layers/max_pool_2d.rs:31）——本模型 VALID，兼容",
+      "MeanChip::get_keep_axis": "要求去掉 mean 轴后只剩 1 个轴——axes={1,2}、rank=4，兼容；[2,1] 顺序无影响",
+      "PadChip": "填充值固定为常量 0——见 semantic_degradation",
+      "FullyConnected": "参数只有 activation——[0]，兼容"
+    }
+  },
+
+  "p4_inputs_static_only": {
+    "macs_g": 0.592695,
+    "ops_g": 1.185391,
+    "litert_reported_ops_g": 1.187,
+    "largest_layer": {"op": 1, "macs": 38535168, "desc": "stem 64x64x64 k7 ic3"},
+    "weight_scalars_in_msgpack": 11684731,
+    "msgpack_model_bytes": 33441970,
+    "pad_cell_inflation": {
+      "pad_out_cells": 473708,
+      "sum_all_layer_out_cells": 1597524,
+      "share": 0.2965,
+      "note": "显式 PAD 会在 Rust 侧 materialize 更大的张量，这部分 cell 纯填充。只是静态计数；真正 cell 数取决于 gadget 布局/lookup/packing/selector，必须 P4 实测。不要拿它线性推 prove 时间。"
+    }
+  },
+
+  "artifacts": [
+    {"path": "assets/p3-model.tflite", "bytes": 46789576, "sha256": "4014a8b4cde23d61e328114cf67a2247a766e812b2195d820a49fc13dd4cb4a1"},
+    {"path": "assets/p3-model-nchw-io.tflite", "bytes": 46776576, "sha256": "bb609776b55a0dd080b72825536f4c970e83bf1bada6e21c4066d25ba0b30634", "status": "rejected"},
+    {"path": "assets/p3-prereg.json", "bytes": 4750, "sha256": "2a898d0c1a7e1d55c6c37c1970661373e7cdb12ee10c4c804713b59a499e9972"},
+    {"path": "assets/p3-convert-report.json", "bytes": 4152, "sha256": "c4f71363fa8d8f519b18c92983187e392b6592537fbba8437fd7057ac88332fe"},
+    {"path": "assets/p3-opaudit.json", "bytes": 102033, "sha256": "85a11cf3558522008ffb40bd9221cbe2a6c6630a24257f266971e3f3aa295c83"},
+    {"path": "assets/p3-crosscheck.json", "sha256": "f5e7884f763191c0317f1705d29dc13346515dda96c217c66ef4fa72a71c749b"},
+    {"path": "assets/p3-msgpack-summary.json", "sha256": "6d28e58ced53786c87b0469b72ab9a5ef3a209518e3f9434e58410b0ea8b5775"},
+    {"path": "assets/p3-env-freeze.txt", "sha256": "e91fe0b937480f16f1c6d8b8d23915cc98c1bf6c296302acbbbe86ee05ffad2f"},
+    {"path": "logs/p3/converter-smoke.log", "note": "原样运行的失败日志（PADV2）"},
+    {"path": "logs/p3/converter-patched.log", "note": "补丁后成功产出的完整日志"},
+    {"path": "logs/p3/patched-model.msgpack", "bytes": 33441970, "sha256": "74bc3f77f772c4e9883a1d6545521b92d1fe564af24f8e4ff635b18b1833f6a5"},
+    {"path": "logs/p3/patched-config.msgpack", "bytes": 3958, "sha256": "d23276b52ecc5479226d95a13e788c70c17d6500f3ae9fba4c62397cc9fa917d"},
+    {"path": "patches/converter_p3_padv2.py", "bytes": 21529, "sha256": "c6bb8e8d19f15e749e89386ab211062698cbf87a03accdaa9f7d72411054439b"},
+    {"path": "scripts/p3_opaudit.py", "sha256": "d1cca4c5d2935de2dc4c22d9440a2cb1e2d297ad9d073d135a20ef7cf2e52c99"},
+    {"path": "scripts/p3_crosscheck.py", "sha256": "eacc6628adeb9fe333a6a2a57c0fd87a414d251c4384a409a9abd5beed4d8d02"},
+    {"path": "scripts/p3_converter_probe.py", "sha256": "e163679ff3eae9ba0255dab1fc9682678ccd6dd86af7eda85b80b9591d64b390"},
+    {"path": "scripts/p3_prep.py", "sha256": "6d2025b945d88067b6ebc6ebe77652bee50289a440cc4891f307edeb72479c06"},
+    {"path": "scripts/p3_convert.py", "sha256": "aad4a8d266d3f31ae36a7a8477dd6138feaa5ab0bf4c7bb07d1575731f856436"}
+  ],
+
+  "acknowledged_gaps": [
+    "定点（scale）误差未测：FP32 门禁与定点等价是两件事",
+    "无数据集精度评估，因此不宣称「精度无损」",
+    "Rust 侧数值未与 TFLite 对齐（P4 预算门禁通过后才做）",
+    "ai-edge-litert 兼容层不是官方 TensorFlow；出现疑点须回真 TF 复核",
+    "C16 为记录项（TRANSPOSE=0），不构成判据",
+    "补丁只做过本模型一次烟测，没有边界测试集，也没有负向用例"
+  ],
+
+  "not_claimed": [
+    "ResNet 证明成功",
+    "精度无损",
+    "定点等价",
+    "与旧路线同模型同输入",
+    "补丁可直接采纳"
+  ],
+
+  "open_decisions": [
+    "是否采纳 PADV2 补丁；是否接受「-inf 填充 + 非 ReLU 输入则拒绝」这条断言",
+    "是否先补 §2.6 的三处 P2A 收紧（末元素 104 代数分类、加载异常三模式、105 副本独立归档）再进 P4",
+    "P4 目标规模（k / 列数）：本批未给任何建议值；converter 默认 k=19 只是烟测占位"
+  ]
+}
