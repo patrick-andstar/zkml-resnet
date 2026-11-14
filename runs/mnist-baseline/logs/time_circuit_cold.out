@@ -1,0 +1,255 @@
+Time elapsed in params construction: 1.404213103s
+Processing layer 0, type: Conv2D, inp_idxes: [0, 7, 1], out_idxes: [22], layer_params: [0, 1, 3, 1, 1]
+Out 0 shape: [1, 26, 26, 8]
+
+Processing layer 1, type: AvgPool2D, inp_idxes: [22], out_idxes: [23], layer_params: [2, 2, 2, 2]
+out_shape: [1, 13, 13, 8]
+Out 0 shape: [1, 13, 13, 8]
+
+Processing layer 2, type: Mul, inp_idxes: [23, 14], out_idxes: [24], layer_params: []
+Out 0 shape: [1, 13, 13, 8]
+
+Processing layer 3, type: Add, inp_idxes: [24, 15], out_idxes: [25], layer_params: [0]
+Out 0 shape: [1, 13, 13, 8]
+
+Processing layer 4, type: Conv2D, inp_idxes: [25, 8, 2], out_idxes: [26], layer_params: [0, 1, 3, 1, 1]
+Out 0 shape: [1, 11, 11, 16]
+
+Processing layer 5, type: AvgPool2D, inp_idxes: [26], out_idxes: [27], layer_params: [2, 2, 2, 2]
+out_shape: [1, 5, 5, 16]
+Out 0 shape: [1, 5, 5, 16]
+
+Processing layer 6, type: Mul, inp_idxes: [27, 16], out_idxes: [28], layer_params: []
+Out 0 shape: [1, 5, 5, 16]
+
+Processing layer 7, type: Add, inp_idxes: [28, 17], out_idxes: [29], layer_params: [0]
+Out 0 shape: [1, 5, 5, 16]
+
+Processing layer 8, type: Conv2D, inp_idxes: [29, 9, 3], out_idxes: [30], layer_params: [0, 1, 3, 1, 1]
+Out 0 shape: [1, 3, 3, 16]
+
+Processing layer 9, type: Mul, inp_idxes: [30, 18], out_idxes: [31], layer_params: []
+Out 0 shape: [1, 3, 3, 16]
+
+Processing layer 10, type: Add, inp_idxes: [31, 19], out_idxes: [32], layer_params: [0]
+Out 0 shape: [1, 3, 3, 16]
+
+Processing layer 11, type: Conv2D, inp_idxes: [32, 10, 4], out_idxes: [33], layer_params: [0, 1, 3, 1, 1]
+Out 0 shape: [1, 3, 3, 4]
+
+Processing layer 12, type: Mul, inp_idxes: [33, 20], out_idxes: [34], layer_params: []
+Out 0 shape: [1, 3, 3, 4]
+
+Processing layer 13, type: Add, inp_idxes: [34, 21], out_idxes: [35], layer_params: [0]
+Out 0 shape: [1, 3, 3, 4]
+
+Processing layer 14, type: Conv2D, inp_idxes: [35, 11, 5], out_idxes: [36], layer_params: [0, 1, 3, 1, 1]
+Out 0 shape: [1, 1, 1, 64]
+
+Processing layer 15, type: Conv2D, inp_idxes: [36, 12, 6], out_idxes: [37], layer_params: [0, 1, 0, 1, 1]
+Out 0 shape: [1, 1, 1, 10]
+
+final out[0] x: 0 (0)
+final out[1] x: 0 (0)
+final out[2] x: 0 (0)
+final out[3] x: 0 (0)
+final out[4] x: 0 (0)
+final out[5] x: 0 (0)
+final out[6] x: 0 (0)
+final out[7] x: 0 (0)
+final out[8] x: 0 (0)
+final out[9] x: 0 (0)
+final out idxes: [37]
+Time elapsed in generating vkey: 683.709762ms
+vkey size: 25608 bytes
+Processing layer 0, type: Conv2D, inp_idxes: [0, 7, 1], out_idxes: [22], layer_params: [0, 1, 3, 1, 1]
+Out 0 shape: [1, 26, 26, 8]
+
+Processing layer 1, type: AvgPool2D, inp_idxes: [22], out_idxes: [23], layer_params: [2, 2, 2, 2]
+out_shape: [1, 13, 13, 8]
+Out 0 shape: [1, 13, 13, 8]
+
+Processing layer 2, type: Mul, inp_idxes: [23, 14], out_idxes: [24], layer_params: []
+Out 0 shape: [1, 13, 13, 8]
+
+Processing layer 3, type: Add, inp_idxes: [24, 15], out_idxes: [25], layer_params: [0]
+Out 0 shape: [1, 13, 13, 8]
+
+Processing layer 4, type: Conv2D, inp_idxes: [25, 8, 2], out_idxes: [26], layer_params: [0, 1, 3, 1, 1]
+Out 0 shape: [1, 11, 11, 16]
+
+Processing layer 5, type: AvgPool2D, inp_idxes: [26], out_idxes: [27], layer_params: [2, 2, 2, 2]
+out_shape: [1, 5, 5, 16]
+Out 0 shape: [1, 5, 5, 16]
+
+Processing layer 6, type: Mul, inp_idxes: [27, 16], out_idxes: [28], layer_params: []
+Out 0 shape: [1, 5, 5, 16]
+
+Processing layer 7, type: Add, inp_idxes: [28, 17], out_idxes: [29], layer_params: [0]
+Out 0 shape: [1, 5, 5, 16]
+
+Processing layer 8, type: Conv2D, inp_idxes: [29, 9, 3], out_idxes: [30], layer_params: [0, 1, 3, 1, 1]
+Out 0 shape: [1, 3, 3, 16]
+
+Processing layer 9, type: Mul, inp_idxes: [30, 18], out_idxes: [31], layer_params: []
+Out 0 shape: [1, 3, 3, 16]
+
+Processing layer 10, type: Add, inp_idxes: [31, 19], out_idxes: [32], layer_params: [0]
+Out 0 shape: [1, 3, 3, 16]
+
+Processing layer 11, type: Conv2D, inp_idxes: [32, 10, 4], out_idxes: [33], layer_params: [0, 1, 3, 1, 1]
+Out 0 shape: [1, 3, 3, 4]
+
+Processing layer 12, type: Mul, inp_idxes: [33, 20], out_idxes: [34], layer_params: []
+Out 0 shape: [1, 3, 3, 4]
+
+Processing layer 13, type: Add, inp_idxes: [34, 21], out_idxes: [35], layer_params: [0]
+Out 0 shape: [1, 3, 3, 4]
+
+Processing layer 14, type: Conv2D, inp_idxes: [35, 11, 5], out_idxes: [36], layer_params: [0, 1, 3, 1, 1]
+Out 0 shape: [1, 1, 1, 64]
+
+Processing layer 15, type: Conv2D, inp_idxes: [36, 12, 6], out_idxes: [37], layer_params: [0, 1, 0, 1, 1]
+Out 0 shape: [1, 1, 1, 10]
+
+final out[0] x: 0 (0)
+final out[1] x: 0 (0)
+final out[2] x: 0 (0)
+final out[3] x: 0 (0)
+final out[4] x: 0 (0)
+final out[5] x: 0 (0)
+final out[6] x: 0 (0)
+final out[7] x: 0 (0)
+final out[8] x: 0 (0)
+final out[9] x: 0 (0)
+final out idxes: [37]
+Time elapsed in generating pkey: 445.9842ms
+pkey size: 113272044 bytes
+Processing layer 0, type: Conv2D, inp_idxes: [0, 7, 1], out_idxes: [22], layer_params: [0, 1, 3, 1, 1]
+Out 0 shape: [1, 26, 26, 8]
+
+Processing layer 1, type: AvgPool2D, inp_idxes: [22], out_idxes: [23], layer_params: [2, 2, 2, 2]
+out_shape: [1, 13, 13, 8]
+Out 0 shape: [1, 13, 13, 8]
+
+Processing layer 2, type: Mul, inp_idxes: [23, 14], out_idxes: [24], layer_params: []
+Out 0 shape: [1, 13, 13, 8]
+
+Processing layer 3, type: Add, inp_idxes: [24, 15], out_idxes: [25], layer_params: [0]
+Out 0 shape: [1, 13, 13, 8]
+
+Processing layer 4, type: Conv2D, inp_idxes: [25, 8, 2], out_idxes: [26], layer_params: [0, 1, 3, 1, 1]
+Out 0 shape: [1, 11, 11, 16]
+
+Processing layer 5, type: AvgPool2D, inp_idxes: [26], out_idxes: [27], layer_params: [2, 2, 2, 2]
+out_shape: [1, 5, 5, 16]
+Out 0 shape: [1, 5, 5, 16]
+
+Processing layer 6, type: Mul, inp_idxes: [27, 16], out_idxes: [28], layer_params: []
+Out 0 shape: [1, 5, 5, 16]
+
+Processing layer 7, type: Add, inp_idxes: [28, 17], out_idxes: [29], layer_params: [0]
+Out 0 shape: [1, 5, 5, 16]
+
+Processing layer 8, type: Conv2D, inp_idxes: [29, 9, 3], out_idxes: [30], layer_params: [0, 1, 3, 1, 1]
+Out 0 shape: [1, 3, 3, 16]
+
+Processing layer 9, type: Mul, inp_idxes: [30, 18], out_idxes: [31], layer_params: []
+Out 0 shape: [1, 3, 3, 16]
+
+Processing layer 10, type: Add, inp_idxes: [31, 19], out_idxes: [32], layer_params: [0]
+Out 0 shape: [1, 3, 3, 16]
+
+Processing layer 11, type: Conv2D, inp_idxes: [32, 10, 4], out_idxes: [33], layer_params: [0, 1, 3, 1, 1]
+Out 0 shape: [1, 3, 3, 4]
+
+Processing layer 12, type: Mul, inp_idxes: [33, 20], out_idxes: [34], layer_params: []
+Out 0 shape: [1, 3, 3, 4]
+
+Processing layer 13, type: Add, inp_idxes: [34, 21], out_idxes: [35], layer_params: [0]
+Out 0 shape: [1, 3, 3, 4]
+
+Processing layer 14, type: Conv2D, inp_idxes: [35, 11, 5], out_idxes: [36], layer_params: [0, 1, 3, 1, 1]
+Out 0 shape: [1, 1, 1, 64]
+
+Processing layer 15, type: Conv2D, inp_idxes: [36, 12, 6], out_idxes: [37], layer_params: [0, 1, 0, 1, 1]
+Out 0 shape: [1, 1, 1, 10]
+
+final out[0] x: -5312 (-10.375)
+final out[1] x: -8056 (-15.734375)
+final out[2] x: -8186 (-15.98828125)
+final out[3] x: -1669 (-3.259765625)
+final out[4] x: -4260 (-8.3203125)
+final out[5] x: 6614 (12.91796875)
+final out[6] x: -5131 (-10.021484375)
+final out[7] x: -6862 (-13.40234375)
+final out[8] x: -3047 (-5.951171875)
+final out[9] x: -805 (-1.572265625)
+final out idxes: [37]
+Time elapsed in filling circuit: 163.669109ms
+Public vals size: 320 bytes
+Processing layer 0, type: Conv2D, inp_idxes: [0, 7, 1], out_idxes: [22], layer_params: [0, 1, 3, 1, 1]
+Out 0 shape: [1, 26, 26, 8]
+
+Processing layer 1, type: AvgPool2D, inp_idxes: [22], out_idxes: [23], layer_params: [2, 2, 2, 2]
+out_shape: [1, 13, 13, 8]
+Out 0 shape: [1, 13, 13, 8]
+
+Processing layer 2, type: Mul, inp_idxes: [23, 14], out_idxes: [24], layer_params: []
+Out 0 shape: [1, 13, 13, 8]
+
+Processing layer 3, type: Add, inp_idxes: [24, 15], out_idxes: [25], layer_params: [0]
+Out 0 shape: [1, 13, 13, 8]
+
+Processing layer 4, type: Conv2D, inp_idxes: [25, 8, 2], out_idxes: [26], layer_params: [0, 1, 3, 1, 1]
+Out 0 shape: [1, 11, 11, 16]
+
+Processing layer 5, type: AvgPool2D, inp_idxes: [26], out_idxes: [27], layer_params: [2, 2, 2, 2]
+out_shape: [1, 5, 5, 16]
+Out 0 shape: [1, 5, 5, 16]
+
+Processing layer 6, type: Mul, inp_idxes: [27, 16], out_idxes: [28], layer_params: []
+Out 0 shape: [1, 5, 5, 16]
+
+Processing layer 7, type: Add, inp_idxes: [28, 17], out_idxes: [29], layer_params: [0]
+Out 0 shape: [1, 5, 5, 16]
+
+Processing layer 8, type: Conv2D, inp_idxes: [29, 9, 3], out_idxes: [30], layer_params: [0, 1, 3, 1, 1]
+Out 0 shape: [1, 3, 3, 16]
+
+Processing layer 9, type: Mul, inp_idxes: [30, 18], out_idxes: [31], layer_params: []
+Out 0 shape: [1, 3, 3, 16]
+
+Processing layer 10, type: Add, inp_idxes: [31, 19], out_idxes: [32], layer_params: [0]
+Out 0 shape: [1, 3, 3, 16]
+
+Processing layer 11, type: Conv2D, inp_idxes: [32, 10, 4], out_idxes: [33], layer_params: [0, 1, 3, 1, 1]
+Out 0 shape: [1, 3, 3, 4]
+
+Processing layer 12, type: Mul, inp_idxes: [33, 20], out_idxes: [34], layer_params: []
+Out 0 shape: [1, 3, 3, 4]
+
+Processing layer 13, type: Add, inp_idxes: [34, 21], out_idxes: [35], layer_params: [0]
+Out 0 shape: [1, 3, 3, 4]
+
+Processing layer 14, type: Conv2D, inp_idxes: [35, 11, 5], out_idxes: [36], layer_params: [0, 1, 3, 1, 1]
+Out 0 shape: [1, 1, 1, 64]
+
+Processing layer 15, type: Conv2D, inp_idxes: [36, 12, 6], out_idxes: [37], layer_params: [0, 1, 0, 1, 1]
+Out 0 shape: [1, 1, 1, 10]
+
+final out[0] x: -5312 (-10.375)
+final out[1] x: -8056 (-15.734375)
+final out[2] x: -8186 (-15.98828125)
+final out[3] x: -1669 (-3.259765625)
+final out[4] x: -4260 (-8.3203125)
+final out[5] x: 6614 (12.91796875)
+final out[6] x: -5131 (-10.021484375)
+final out[7] x: -6862 (-13.40234375)
+final out[8] x: -3047 (-5.951171875)
+final out[9] x: -805 (-1.572265625)
+final out idxes: [37]
+Proving time: 3.356714588s
+Proof size: 3360 bytes
+public vals: [0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593efffeb41, 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593efffe089, 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593efffe007, 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593effff97c, 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593efffef5d, 0x00000000000000000000000000000000000000000000000000000000000019d6, 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593efffebf6, 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593efffe533, 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593effff41a, 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593effffcdc]
+Verifying time: 6.758563ms

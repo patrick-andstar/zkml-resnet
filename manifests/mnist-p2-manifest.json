@@ -1,0 +1,93 @@
+{
+  "manifest_version": 1,
+  "created_utc": "2026-11-14T10:15:00Z",
+  "stage": "P1-P2",
+  "p2a_note": "本文件保留 P2 的 legacy 测量（measure.py 20 ms 轮询版）。性能结论已作废，校准结果见 manifests/mnist-p2a-calib-manifest.json 与 过程文档/03-P2A-量具校准与读取对照.md。产物摘要仍然有效（P2A 已复核未改动）。",
+  "note": "MNIST 闭环与计时校准清单。SRS 与 vkey/proof/public_vals 必须成套使用；换 SRS 即作废。",
+  "host": {
+    "endpoint": "<redacted-host>:<port>",
+    "host_key_sha256": "EPstg8jNN+u3Bs1JyQOqlBeq3w+a4VynoJAe48YnIV0",
+    "os": "Ubuntu 22.04.4 LTS",
+    "cpu": "Intel Xeon Gold 6430, cpuset 0-127",
+    "cpu_max": "1600000 100000 (equivalent 16 CPU)",
+    "memory_max_bytes": 128849018880,
+    "memory_high_bytes": 126701535232,
+    "swap_max_bytes": 0,
+    "root_disk_gb": 30,
+    "data_disk_gb": 50,
+    "gpu": "RTX 4090 24564 MiB (unused: locked Halo2 rev has no GPU backend)"
+  },
+  "toolchain": {
+    "channel": "nightly-2026-11-01",
+    "rustc": "1.101.0-nightly (f9ceb4a4d 2026-10-31)",
+    "cargo": "1.101.0-nightly (31d3246e0 2026-10-27)",
+    "gcc": "11.4.0",
+    "ld": "2.38",
+    "deviation": "论文时代无锁定日期 toolchain；因 2026 年依赖要求 edition2024 而选用现代 nightly，属复现偏离"
+  },
+  "source": {
+    "archive_sha256": "e343e67032a88bfc0c002bfd0eba944b5cc04a021569d0db75525ff225162a2b",
+    "file_count": 125,
+    "files": {
+      "Cargo.toml": "37bc67e3dcbf54d5218a3d02a6fb95d7221d2aeacc27d3597e02046dd2f40f4e",
+      "python/converter.py": "38053886afe0bef2e5945b7d7d096c92ad931f224084a94e5b9f0d70af500039",
+      "src/model.rs": "05d75b45c32de00659c89c60a6e69b12bda4c00cd5766b63430afe632a87bc0e",
+      "src/utils/proving_kzg.rs": "105354f0acb7adaa0df4fcaed11aea0a6dc18b2cb3f19f4b4173dd9c7b39d205"
+    },
+    "cargo_lock_sha256": "7d00bc54b3637d9daf7966b669e672ca1c642845d6d77d2d8a155112b2c1e205",
+    "cargo_lock_packages": 81,
+    "pinned": {
+      "halo2": "git rev 17e9765c199670534c0299c96128d0464a188d0b",
+      "halo2_proofs": "git rev 17e9765c199670534c0299c96128d0464a188d0b",
+      "halo2_gadgets": "git rev 17e9765c199670534c0299c96128d0464a188d0b",
+      "halo2curves": "git tag 0.3.2 (#9f5c50810bbefe779ee5cf1d852b2fe85dc35d5e)"
+    }
+  },
+  "patch": {
+    "file": "patches/verify_profile.rs",
+    "sha256": "3e84f8e29c54057ac89ebb5edb8bdea308c6dc95e800acf154d71d03e5af4ea3",
+    "scope": "新增独立 binary；不改原电路/协议/密钥格式；显式 params 目录，缺参直接失败"
+  },
+  "mnist": {
+    "k": 15,
+    "num_cols": 7,
+    "scale": 512,
+    "threads_prove": 16,
+    "threads_verify": 1,
+    "cpu_affinity": 0,
+    "srs_namespace": "/root/autodl-tmp/zkml-repro/srs/mnist-initial",
+    "artifacts": {
+      "15.params": {"bytes": 4194564, "sha256": "1e9ef6f46a33d2c60f6e4275f16ae936475b52b4dfbf056235daffa86306c95d"},
+      "vkey": {"bytes": 25608, "sha256": "eb095671d3365d615f5cdf7000bad91ba606dc14b02c5d4b09d2e6f5cca5aafa"},
+      "pkey": {"bytes": 113272044, "sha256": "47aea2dbc09fb0276fd246ffb2322da4c79feb7cde0347a829e479f69362cbbc"},
+      "proof": {"bytes": 3360, "sha256": "d700fd154a6e23783cb8da09e11b94a9efcd942861127f8a38abb3b310e35623"},
+      "public_vals": {"bytes": 320, "sha256": "37987fed3d53d98d07a4da9dd4ad9e9691b063673a532b8594d2fab4200a9b22"}
+    },
+    "inputs": {
+      "config.msgpack": "dcf61f7d3cdc379b82c688253b4eb3420e8c58abf1eda46f26f79a04a337847f",
+      "model.msgpack": "9d00a1a377339448f55fd5666f38e376553654ffb884210597fdd615bf2967b4",
+      "inp.msgpack": "9eb8082aa546e2e6002015524539d2c4d976639ea13aab985edd11bc212abe25"
+    },
+    "measured": {
+      "test_circuit": {"exit": 0, "wall_s": 0.647, "peak_rss_mb": 117},
+      "time_circuit_cold": {
+        "wall_s": 6.115,
+        "peak_rss_mb": 326,
+        "params_construction_s": 1.404,
+        "vkey_s": 0.684,
+        "pkey_s": 0.446,
+        "filling_ms": 163.7,
+        "proving_s": 3.357,
+        "internal_verify_ms": 6.76
+      },
+      "verify_original_1cpu": {"runs": 10, "wall_median_ms": 222.9, "wall_min_ms": 222.7, "wall_max_ms": 224.0, "core_median_ms": 8.8},
+      "verify_profile_1cpu": {"runs": 10, "wall_median_ms": 222.9, "params_median_ms": 185.5, "vk_median_ms": 7.2, "core_median_ms": 8.8, "config_ms": 0.05, "cleanup_ms": 0.33, "residual_ms": 20.7},
+      "verify_profile_16threads": {"runs": 3, "wall_ms": [222.9, 223.2, 222.9], "params_ms": [184.9, 184.5, 184.5]},
+      "negative": {"proof_bitflip_exit": 101, "public_value_change_exit": 101}
+    }
+  },
+  "estimates_not_measured": {
+    "srs_load_scaling": "按 2^k 线性外推：k=20 ~5.9s / k=24 ~95s / k=28 ~25min；k=28 参数文件约 34.4GB",
+    "caveat": "外推不是实测；未验证更高 k 的绝对耗时与内存"
+  }
+}

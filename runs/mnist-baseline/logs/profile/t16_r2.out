@@ -1,0 +1,2 @@
+{"k":15,"num_cols":7,"params_path":"/root/autodl-tmp/zkml-repro/srs/mnist-initial/15.params","proof_bytes":3360,"vk_bytes":25608,"public_vals":10,"config_ms":0.165,"circuit_ms":0.082,"params_ms":184.467,"vk_ms":7.585,"proof_ms":0.015,"public_ms":0.008,"init_ms":0.000,"core_ms":8.033,"cleanup_ms":0.397,"accounted_ms":200.752,"total_ms":200.789,"residual_ms":0.038,"peak_rss_bytes":11878400}
+Proof verified!
