@@ -3,8 +3,8 @@
   "title": "model 侧：三段生命周期 + config-only 双模式 + commit 判据",
   "date": "2026-11-14",
   "authorization": "plan.md §2.9.3 / §2.10.3：先申请 P4-A 定向补正，优先第 2/3 项与第 6 项。本批只做 model 侧（第 2、3、4a 条），converter 侧（4b、5、6）未做。",
-  "status": "static_only",
-  "status_note": "**未编译、未运行**。本批只产出候选、生成器与门禁；cargo check 需另行许可（plan §2.9.3 明确新候选编译要重新明确许可）。",
+  "status": "compiled_not_run",
+  "status_note": "**已通过一次隔离编译检查（cargo check --offline --locked -j 4, rc=0），未运行任何东西。** 编译通过不等于第 2/3 条验收通过：稀疏图、config-only、commit 行为都需要后续有限回归。",
 
   "addressed": [
     {
@@ -39,11 +39,23 @@
   },
 
   "chain_verification": {
-    "method": "在 /tmp 里从 pristine model.rs 依次 patch v2 / v3 / v4，再与 v4 文件逐字节比较",
+    "method": "在 /tmp 里从 pristine model.rs 依次 patch v2 / v3 / v4，对链末做 tr -d '\\r' 换行归一后再与 v4 文件比较",
     "pristine_sha256_prefix": "05d75b45c32de006",
-    "result": "PASS —— 链末 tr -d '\\r' 后与 patches/model_numeric_contract_v4.rs 完全一致",
-    "note": "这证明补丁链闭合，但不证明 Rust 可编译，也不证明语义正确。"
+    "result": "PASS —— 换行归一后逐字节一致",
+    "wording_note": "这是**换行归一后**的一致，不是未经处理的原始字节完全相同（本地 CRLF，Linux 应用后为 LF）。",
+    "note": "该结果只支持「补丁链可从 pristine 重现」，不支持可编译，也不支持语义正确。"
   },
+
+  "known_static_gaps": [
+    {
+      "id": "V4-G1",
+      "what": "ConfigOnly 下 commit_before 与 initial_ids 不兼容",
+      "detail": "tensors 为空时 initial_ids 只剩模型输入；而 commit_before 仍要求 ID ∈ initial_ids。完整模型里合法地在 DAG 前承诺一个权重，在瘦配置验证下仍会被拒。",
+      "scope": "默认 --no-commit 路径下 commit_before 为空、检查不触发，故不表示目标已失败；但「config-only 与 commit 兼容」不能说闭合。",
+      "status": "已登记，未修。修法方向：ConfigOnly 下只校验「不是未来层产出」，或记录 unresolved_commit_ids 降级为警告，并补一条回归。",
+      "registered": "2026-11-15，用户复核指出"
+    }
+  ],
 
   "generator_gate": {
     "script": "scripts/p4a_make_model_patch_v4.py",
@@ -71,8 +83,48 @@
     }
   ],
 
+  "compile_check": {
+    "when": "2026-11-15T00:05:37+08:00",
+    "command": "cargo check --offline --locked -j 4",
+    "cwd": "/root/autodl-tmp/zkml-repro/src",
+    "attempts": 1,
+    "rc": 0,
+    "elapsed_s": 1.86,
+    "source_combination": {
+      "src/gadgets/max.rs": "970928e8a13520e4",
+      "src/model.rs": "cc1316a4c6a1f44b",
+      "src/layers/shape/pad.rs": "89fbf3c258ffc7c2"
+    },
+    "toolchain": "cargo 1.101.0-nightly (31d3246e0 2026-10-27) / rustc 1.101.0-nightly (f9ceb4a4d 2026-10-31)",
+    "did_recheck_crate": true,
+    "did_recheck_evidence": "日志含 `Checking zkml v0.0.1 (...)`，非缓存命中",
+    "new_warnings": 0,
+    "preexisting_warnings": "dot_prod 双重引用 clone / arithmetic 无意义 clone / int_roundings 未使用 / verify_wav 弃用 API / 2 个未使用依赖",
+    "log": "logs/p4b/b5-model-v4-check.log",
+    "log_sha256_prefix": "64f5f60f70c71af0",
+    "boundary": {
+      "recorded_conclusion": "v4 在上述 Max/model/pad 组合下通过类型与借用检查",
+      "not_proven": [
+        "稀疏图正例（初始 {0,2} → L0 产 1）未构造未运行",
+        "config-only 未跑 verify_circuit",
+        "commit 判据未与 converter 实际输出对账",
+        "§4.1 的 ConfigOnly/commit 缺口仍存在",
+        "无数值、约束或 soundness 结论"
+      ]
+    },
+    "scope_compliance": {
+      "offline": true,
+      "locked": true,
+      "no_lockfile_update": true,
+      "no_dependency_download": true,
+      "reused_existing_target": true,
+      "no_fix_and_retry": true,
+      "no_tests_or_converter_or_prove": true
+    }
+  },
+
   "not_claimed": [
-    "未编译：类型/借用/生命周期是否通过，只有 cargo check 能回答。",
+    "编译通过 ≠ 第2/3条验收：只证明类型与借用检查通过，未证明稀疏图、config-only 或 commit 行为正确。",
     "未运行：没有构造 {0,2}→L0 产 1 的稀疏正例，也没有跑 config-only 回归。",
     "不构成 P4-A 验收：第 4b/5/6 条未做。",
     "LoadMode 是推断而非显式契约，属已知设计折中。"

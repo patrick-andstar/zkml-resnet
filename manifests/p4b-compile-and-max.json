@@ -102,6 +102,7 @@
     "shift_min_val_hand_set": 64,
     "shift_actual_offset": "max.rs 用 F::from((-shift_min_val) as u64) 作偏移，+64 实际得到 2^64-64，不是 +64",
     "lookup_table_actual": "[0, 999]（num_rows=1000），不是生产公式在 k=12 的 [0, 4086]",
+    "independence_note": "查表范围由 num_rows 决定；shift 的符号/cast 决定宿主比较的可表达范围。这是两个独立问题，不是「shift 错了所以查表不是 [0,4086]」。",
     "k": 12,
     "binding": "输出用 constrain_instance 钉住宿主参考 max；算错必然使 MockProver 失败",
     "negative_control": "每个用例另跑一次期望值 +1，必须被拒；否则该用例不记 PASS",

@@ -1,0 +1,98 @@
+== cmd ==
+cargo check --offline --locked -j 4
+== cwd ==
+/root/autodl-tmp/zkml-repro/src
+== rustc/cargo ==
+cargo 1.101.0-nightly (31d3246e0 2026-10-27)
+rustc 1.101.0-nightly (f9ceb4a4d 2026-10-31)
+== src identity ==
+970928e8a13520e402eaf34949b66e8913bf8aa505d3e77210da10738d0909db  src/gadgets/max.rs
+cc1316a4c6a1f44b5cb71734f9af1347fc7da589e5012f63ecc740370acc642f  src/model.rs
+89fbf3c258ffc7c2f0097e98aa76b04600e353617e24c9e6f1923675f1afa529  src/layers/shape/pad.rs
+== start: 2026-11-15T00:05:37+08:00 ==
+    Checking zkml v0.0.1 (/root/autodl-tmp/zkml-repro/src)
+warning: using `.clone()` on a double reference, which returns `&AssignedCell<F, F>` instead of cloning the inner type
+   --> src/gadgets/dot_prod.rs:189:77
+    |
+189 |               .op_row_region(&mut region, i, &vec![inp, weights], &vec![zero.clone()])
+    |                                                                             ^^^^^^^^
+    |
+    = note: `#[warn(suspicious_double_ref_op)]` on by default
+
+warning: call to `.clone()` on a reference in this situation does nothing
+  --> src/layers/arithmetic.rs:37:33
+   |
+37 |     let out_shape = inp1.shape().clone();
+   |                                 ^^^^^^^^ help: remove this redundant call
+   |
+   = note: the type `[usize]` does not implement `Clone`, so calling `clone` on `&[usize]` copies the reference, which does not do anything and can be removed
+   = note: `#[warn(noop_method_call)]` on by default
+
+warning: feature `int_roundings` is declared but not used
+ --> src/lib.rs:1:12
+  |
+1 | #![feature(int_roundings)]
+  |            ^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_features)]` (part of `#[warn(unused)]`) on by default
+
+warning: `zkml` (lib) generated 3 warnings (run `cargo fix --lib -p zkml` to apply 1 suggestion)
+warning: unused import: `ff::PrimeField`
+  --> src/bin/p4b_max_test.rs:18:28
+   |
+18 |   halo2curves::{bn256::Fr, ff::PrimeField},
+   |                            ^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `expected` is never read
+  --> src/bin/p4b_max_test.rs:47:3
+   |
+45 | struct MaxTest<const G: usize> {
+   |        ------- field in this struct
+46 |   input: Vec<i64>,
+47 |   expected: i64,
+   |   ^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `zkml` (bin "p4b_max_test") generated 2 warnings (run `cargo fix --bin "p4b_max_test" -p zkml` to apply 1 suggestion)
+warning: use of deprecated function `wav::read`: This project is no longer maintained, use the `hound` crate
+  --> src/bin/verify_wav.rs:17:30
+   |
+17 |   let (_header, data) = wav::read(&mut wav_file).unwrap();
+   |                              ^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+
+warning: use of deprecated tuple variant `wav::BitDepth::Sixteen`: This project is no longer maintained, use the `hound` crate
+  --> src/bin/verify_wav.rs:19:20
+   |
+19 |     wav::BitDepth::Sixteen(data) => data,
+   |                    ^^^^^^^
+
+warning: use of deprecated field `wav::BitDepth::Sixteen::0`: This project is no longer maintained, use the `hound` crate
+  --> src/bin/verify_wav.rs:19:28
+   |
+19 |     wav::BitDepth::Sixteen(data) => data,
+   |                            ^^^^
+
+warning: `zkml` (bin "verify_wav") generated 3 warnings
+warning: unused dependency `halo2`
+  --> Cargo.toml:24:1
+   |
+24 | halo2 = { git="https://github.com/privacy-scaling-explorations/halo2", package="halo2", rev="17e9765c199670534c0299c96128d0464a188d0...
+   | ^^^^^
+   |
+   = note: `cargo::unused_dependencies` is set to `warn` by default
+help: consider removing the dependency on `halo2`
+warning: unused dependency `serde_json`
+  --> Cargo.toml:37:1
+   |
+37 | serde_json = "1.0.85"
+   | ^^^^^^^^^^
+   |
+help: consider removing the dependency on `serde_json`
+warning: `zkml` (manifest) generated 2 warnings
+    Finished `dev` profile [optimized + debuginfo] target(s) in 1.86s
+== end: 2026-11-15T00:05:39+08:00 rc=0 ==
