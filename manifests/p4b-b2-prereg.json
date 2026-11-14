@@ -1,17 +1,27 @@
 {
-  "batch": "P4-B.2 扩展（预登记）",
+  "batch": "P4-B.2 扩展（预登记 rev2）",
   "date": "2026-11-15",
-  "status": "registered_not_executed",
-  "note": "本文件是执行前的预登记清单。运行结果另存 logs/p4b/，不得回改本文件的预期值。",
+  "status": "registered_revised_driver",
+  "note": "rev2 按用户 2026-11-15 00:46 的六点修订测试驱动判据。预期值未改，只改判据与失败分类。",
+  "revision_log": [
+    "A 矩阵负臂：由 `!= Ok` 改为必须 `VerifyErr`；正臂必须 `Ok` 且失败后不再跑负臂。",
+    "全部矩阵：改为 fail-fast，删除『累计失败>3』。",
+    "B3：panic 来源改用 hook 记录的 file:line，不用空载荷或文本。",
+    "B2：保存完整 verify 失败并核对确有 Lookup 型失败，不只看条数。",
+    "C1：只认 Error::Synthesis，其它 RunErr 记 FAIL。",
+    "B4 措辞：差 0 仍会查表（0 在表内），不是『不查表』。",
+    "运行命令：用 $CARGO_TARGET_DIR 下绝对路径，并核对二进制摘要。",
+    "子矩阵 D（Pad→Max）并入 B.3，作为独立子项报告。"
+  ],
   "identity": {
     "old_test": "local_bins/p4b_max_test.rs (49b6337e…) 原样保留，27/27 结论不回改",
-    "new_test": "local_bins/p4b_max_test_v2.rs（待写）",
+    "new_test": "local_bins/p4b_max_test_v2.rs (rev2)",
     "remote_bin": "src/bin/p4b_max_test_v2.rs",
     "reuse_old_result": false
   },
   "matrix_a_max_independent": {
     "columns": [3, 6, 9, 12],
-    "column_note": "9 列（G=3）是新增档；旧测试只有 3/6/12",
+    "column_note": "9 列（G=3）是新增档",
     "vectors": [
       {"id": "L1", "data": [0], "n": 1},
       {"id": "L2", "data": [5, 1], "n": 2},
@@ -36,72 +46,71 @@
       {"id": "T4", "data": [1, 9, 0, 0, 9, 0, 0, 0, 0], "n": 9, "note": "双峰"}
     ],
     "arms": {
-      "positive": "instance = host max(vector)，预期 verify()==Ok",
-      "negative": "instance = host max + 1，预期 verify()!=Ok",
-      "pass_rule": "正臂通过 且 负臂被拒，才记该组合 PASS"
+      "positive": "instance = host max(vector)，**必须 Kind::Ok**；失败即停，不再跑负臂",
+      "negative": "instance = host max + 1，**必须 Kind::VerifyErr**（不允许 panic / RunErr 冒充）",
+      "pass_rule": "两臂都严格符合才继续；任一不符立即非零退出"
     },
     "runs": 168,
     "runs_formula": "21 向量 x 4 列数 x 2 臂"
   },
   "matrix_b_numeric_boundary": {
-    "why_separate_config": "shift=+64 时 (-shift) as u64 = 2^64-64，宿主不溢出要求 v<=63；而查表是 [0,999]，测 999/1000 边界必然 v>63 会先撞 convert_to_u64 单 limb 上限。故边界必须换 shift。",
+    "why_separate_config": "shift=+64 时 (-shift) as u64 = 2^64-64，宿主不溢出要求 v<=63；查表是 [0,999]，测 999/1000 必然 v>63 会先撞 convert_to_u64 单 limb 上限。故边界必须换 shift。",
     "config": {"shift_min_val": 1024, "num_rows": 1000, "num_cols": 6, "k": 12},
     "cases": [
-      {"id": "B1", "data": [0, 999], "expected": "PASS", "stage": null},
-      {"id": "B2", "data": [0, 1000], "expected": "REJECT", "stage": "lookup_constraint"},
-      {"id": "B3", "data": [0, 1024], "expected": "REJECT", "stage": "host_panic"},
-      {"id": "B4", "data": [1000, 1000], "expected": "PASS", "stage": null}
+      {"id": "B1", "data": [0, 999], "expected": "Ok", "note": "差 999，表内最大差值"},
+      {"id": "B2", "data": [0, 1000], "expected": "VerifyErr", "must_have": "至少 1 条 VerifyFailure::Lookup", "note": "差 1000 超出表，必须是 lookup 拒绝而非任意约束错"},
+      {"id": "B3", "data": [0, 1024], "expected": "Panic", "must_have": "panic 位置以 gadgets/gadget.rs 结尾", "note": "v+offset=2^64，convert_to_u64 单 limb 越界"},
+      {"id": "B4", "data": [1000, 1000], "expected": "Ok", "note": "差 0，仍会查表（0 在表内），不是『不查表』"}
     ],
-    "failure_taxonomy": ["layout_or_configure", "host_panic", "constraint_reject"],
-    "pass_rule": "只有与预登记 stage 一致的失败才记负例通过；B2 若为 panic、B3 若为约束拒绝，均记 FAIL 并停",
+    "failure_taxonomy": [
+      "Kind::Ok",
+      "Kind::VerifyErr（附完整失败详情与 Lookup 计数）",
+      "Kind::RunErrSynthesis",
+      "Kind::RunErrOther",
+      "Kind::Panic（附 file:line:col 与 payload）"
+    ],
+    "pass_rule": "每条必须命中预登记的 kind；B2 另需 Lookup 计数 >=1；B3 另需 panic 位置匹配",
     "runs": 4
   },
   "matrix_c_rejection": {
     "empty_input": {
       "data": [],
-      "expected": "REJECT",
-      "stage": "synthesize",
-      "detail": "MaxChip::forward 返回 Err(Error::Synthesis)",
+      "expected": "Kind::RunErrSynthesis",
+      "detail": "只认 Error::Synthesis；其它 RunErr 记 FAIL",
       "runs": 4,
       "columns": [3, 6, 9, 12]
     },
     "illegal_columns": {
       "cases": [4, 5, 7, 2, 0],
-      "expected": "PANIC",
-      "must_reach": "MaxChip::configure 的 assert（len%3==0 或 len>=3）",
-      "anti_pattern": "不得由测试驱动的 unsupported num_cols 分支拒绝",
-      "impl": "新增 MaxTestRaw<N>，configure 内直接以 N 列调 MaxChip::configure；catch_unwind 断言 panic 文本",
-      "expected_message_fragments": ["multiple of 3", "at least 3"],
+      "expected": "Kind::Panic",
+      "must_have": "panic 位置以 gadgets/max.rs 结尾（MaxChip::configure 的 assert）",
+      "anti_pattern": "不得由测试驱动的 unsupported num_cols 分支拒绝；MaxTestRaw<N> 内不做 3 的倍数预检",
       "runs": 5
     },
     "runs_total": 9
   },
   "matrix_d_pad_to_max": {
-    "included": false,
-    "reason": "需要 PadChip+MaxChip 合成电路或 msgpack 模型；按用户要求与 A/B/C 分列",
-    "distinctions": ["Rust 组合通过", "Python 图保护通过", "真实 TFLite 转换通过"],
-    "distinction_note": "三者不可互相替代，需分别记录"
+    "included_here": false,
+    "moved_to": "B.3（作为独立子项报告）",
+    "distinctions": ["Rust 组合通过", "model 加载回归", "Python 图保护", "真实 TFLite 转换"],
+    "distinction_note": "四者分别报告，不能互相替代"
   },
-  "totals": {"runs": 181, "budget": "预计 <60 s，峰值 RSS <1 GiB"},
+  "totals": {"runs": 181, "budget": "预计 <60 s、峰值 RSS <1 GiB；这是预算估计，不是已测结果"},
   "stop_conditions": [
-    "任一正臂失败 → 立即停",
-    "任一预登记负例被接受 → 立即停",
-    "负例在错误阶段被拒 → 记 FAIL 并停，不记通过",
-    "panic 类型与预登记不符 → 记 FAIL",
+    "任一用例结果与预登记 kind 不符 → 立即非零退出，不继续",
+    "正臂失败 → 立即停，不跑该组合的负臂",
+    "负例在错误阶段被拒（如 B2 出现 panic）→ FAIL 并停，不记通过",
+    "panic 位置与预登记文件不符 → FAIL 并停",
     "需改候选代码才能继续 → 停，另立版本",
-    "累计失败 >3 → 停"
+    "正常完成时 runs 必须等于 181，否则整批 FAIL"
   ],
   "run_scope": {
     "build": "cargo build --offline --locked -j 4 --bin p4b_max_test_v2",
-    "run": "./target/debug/p4b_max_test_v2",
+    "binary_path": "$CARGO_TARGET_DIR/debug/p4b_max_test_v2（绝对路径，且先核对 sha256）",
+    "why_absolute": "CARGO_TARGET_DIR=/root/autodl-tmp/zkml-repro/target，在 $REPRO/src 下用 ./target/debug 会指错目录",
     "reuse_toolchain_cache_target": true,
     "no_dependency_download": true,
     "no_lockfile_update": true,
     "not_run": ["converter", "真实 TFLite 转换", "目标模型", "SRS", "prove/verify"]
-  },
-  "pending_confirmation": [
-    "矩阵规模 181 次是否接受",
-    "子矩阵 D 是否留到 B.3 或另立一批",
-    "是否允许 catch_unwind 作为区分宿主 panic 与约束拒绝的手段"
-  ]
+  }
 }
