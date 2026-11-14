@@ -1,0 +1,109 @@
+{
+  "batch": "P4-A 定向补正（第 2 轮）",
+  "title": "converter 侧 4b/5/6 + model 侧 V4-G1",
+  "date": "2026-11-15",
+  "authorization": "用户 2026-11-15 00:13 确认：按「converter 侧 4b/5/6 + V4-G1」推进，范围限定候选补正与针对性自检，不进入完整转换或模型回归。",
+  "scope": {
+    "done": ["converter 新候选 v3（4b/5/6）", "model 新候选 v5（V4-G1）", "增量 diff", "生成器与门禁", "两条补丁链重现", "隔离 helper 自检 24 项"],
+    "not_done": ["完整 converter 运行", "真实目标 msgpack 转换", "Rust 运行/MockProver/目标模型/SRS/prove", "**v5 未编译**（不继承 v4 的编译结论）"]
+  },
+
+  "converter_v3": {
+    "file": "patches/converter_p4a_v3.py",
+    "sha256_prefix": "21ffde2735ac0d11",
+    "lines": 1023,
+    "diff": "patches/converter_p4a_v3.diff",
+    "diff_sha256_prefix": "a0e8b9db80b5d9d4",
+    "base": "converter_p4a_v2.py（v3.diff 是 v2→v3 增量，203 行）",
+    "changes": {
+      "4b_observation_set": {
+        "new_func": "_observation_tensors(layers)",
+        "what": "观察集合 = 整图输出 graph.Outputs() ∪ 导出子图公开输出 layers[-1]['out_idxes']（仅 expose_output）；消费者数仍按子图重算并要求恰好 1 个 MaxPool。",
+        "why": "v2 只查 layers[-1]['out_idxes']。若原图同时输出 Pad 与 Pool、而导出子图只公开 Pool，Pad 仍被 commit_after（取 output_details）观察，v2 会漏判并静默把 -inf 降成 0。",
+        "evidence_field": "checked_against 改为 graph_outputs+exported_subgraph+single_consumer，并记 observed_tensor_ids",
+        "commit_before_note": "commit_before 由 kept 常量与模型输入构成，不含 Pad 输出（层产物）；若它真被当常量收进 keep_tensors，说明它同时是图输出，已由 graph.Outputs 覆盖。"
+      },
+      "5_metadata_by_position": {
+        "new_func": "_metadata_input_positions(op, op_name)",
+        "what": "返回**输入位置**而非 tensor ID；调用点直接读原始 InputsAsNumpy 数组过滤，避免 get_inputs 先剔 -1 造成位置错位。",
+        "why": "按 ID 过滤会把同一 tensor 的数据位置一起删掉。最小例：INT32 零常量 t 形状 [2,2]，PAD([t,t]) 本是无填充恒等，按 ID 删就变成零输入。",
+        "static_constants": [
+          "普通 PAD 的 paddings 改走 _static_constant",
+          "MEAN 的 axes 改走 _static_constant",
+          "有 producer 即拒绝；Buffer()==0 或空 buffer 也拒绝"
+        ]
+      },
+      "6_rounding_and_scale": {
+        "rounding": "sign(x)*floor(abs(x)+0.5) → 取整+判余数：fl=floor(|x|), frac=|x|-fl, 返回 sign*(fl + (frac>=0.5))。对 |x|<2^53 精确，不引入二次舍入。",
+        "custom": "改为 _quantize_checked(weights, ..., already_scaled=False)，由 helper 先升 float64 再乘 scale。",
+        "div": "改为 float(scale_factor)/float(div_val) 在 float64 里算，再以 already_scaled=True 传入。",
+        "three_paths_audit": "主循环 already_scaled 默认 False；CUSTOM 改后 False；DIV 仍 True 但先算 float64。adjusted_tensors 在主循环里覆盖结果，不会二次乘 scale。"
+      }
+    },
+    "chain_verification": {
+      "method": "pristine python/converter.py → patch v2 → patch v3，换行归一后与 v3 文件比较",
+      "result": "PASS（换行归一后逐字节一致）",
+      "caveat": "支持补丁链可重现，不支持可运行或语义正确"
+    },
+    "gate": {
+      "checks": 14,
+      "plus": "py_compile 语法检查",
+      "result": "15/15 OK"
+    }
+  },
+
+  "model_v5": {
+    "file": "patches/model_numeric_contract_v5.rs",
+    "sha256_prefix": "1b0d3232c9a86000",
+    "lines": 1160,
+    "diff": "patches/model_numeric_contract_v5.diff",
+    "diff_sha256_prefix": "b0399bf05c4248de",
+    "base": "model_numeric_contract_v4.rs（v5.diff 是 v4→v5 增量，99 行）",
+    "fixes": "V4-G1",
+    "what": [
+      "把 commit 的「阶段合法性」与「存在性」分开判：before 引用任何层产出，两种模式都硬拒绝。",
+      "FullWitness：before 必须 ID ∈ initial_ids；after 必须 ID ∈ initial ∪ producer（严格不变）。",
+      "ConfigOnly：未解析的初始承诺 ID 记入 unresolved_commit_ids，不被描述成「依赖已验证」。",
+      "before 与 after 两条路径都改，不只补 before。",
+      "特别覆盖「after 直接承诺初始常量」：瘦配置同样缺该常量实体，同样记入 unresolved。"
+    ],
+    "explicitly_not": [
+      "不把 commit 改成「警告后放行」——ConfigOnly 下未解析 ID 只是被允许，不是被验证。",
+      "不给 verifier 加回全部权重。",
+      "不静默删除承诺组。"
+    ],
+    "chain_verification": {
+      "method": "pristine src/model.rs → v2 → v3 → v4 → v5，换行归一后比较",
+      "result": "PASS（换行归一后逐字节一致）"
+    },
+    "compile_status": "**未编译**。v5 改动了 model 代码，按用户要求另立版本，不继承 v4 的编译通过结论；需提交后单独申请编译检查。"
+  },
+
+  "selftest": {
+    "script": "scripts/p4a_v3_selftest.py",
+    "method": "AST 抽取候选内的真实函数再 exec，不另写一份逻辑；用假 self 提供 consumers/producer/graph 等属性。",
+    "cases": 24,
+    "result": "PASS",
+    "coverage": {
+      "rounding": ["0.5-2^-54 → 0", "0.5 → 1", "-0.5 → -1", "2.5 → 3", "-2.5 → -3", "2^52+1 原样", "0.4999...994 → 0"],
+      "custom_scaling": ["旧序 float32 先乘 → 4194304", "新序先升 float64 → 4194303", "两序不同（反例成立）", "精确乘积 4194303.4999998808 < 4194303.5"],
+      "metadata_position": ["返回位置 [1] 而非 ID", "过滤后数据位置保留 [7]", "按旧逻辑会得到 []"],
+      "dynamic_metadata": ["有 producer 的 paddings 拒绝", "Buffer()==0 的 axes 拒绝", "真常量可读取"],
+      "pad_observation": ["整图输出 → 拒绝", "子图公开输出 → 拒绝", "子图内 2 消费者 → 拒绝", "未观察且唯一消费者 → 通过", "证据字段写入"]
+    },
+    "limits": "只证明这些函数在给定输入下的行为，不证明完整 converter、不覆盖真实 tflite、不覆盖 model 侧语义。"
+  },
+
+  "not_claimed": [
+    "v5 未编译：类型/借用是否通过未知，不能继承 v4 的 rc=0。",
+    "converter v3 未运行：py_compile 只证明可解析。",
+    "4b 的观察集合只在假 graph 上验证过，未与真实 tflite 的 output_details 对账。",
+    "V4-G1 修复后是否与真实 converter 产出的 commit 组兼容，未验证。",
+    "不构成 P4-A 验收；P4-B.2 剩余覆盖与 B.3 模型级回归仍未做。"
+  ],
+
+  "next": [
+    "申请 v5 的隔离编译检查（--offline --locked，一次尝试，失败不修补续跑）。",
+    "随后才是 B.2 剩余覆盖（位置 2–7、长度 4/6/7、全负、9 列、空输入/非法列数、差值边界、Pad→Max）与 B.3 模型级回归。"
+  ]
+}
