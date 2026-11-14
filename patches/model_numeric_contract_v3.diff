@@ -1,0 +1,11 @@
+--- a/src/model.rs
++++ b/src/model.rs
+@@ -379,7 +379,7 @@
+     // 本身出错，只是放弃一层尚未量化的保护。
+     const I32_POLICY: bool = true;
+ 
+-    for flat in config.tensors {
++    for flat in &config.tensors {
+       // P4-A v2（M2）：在编码之前拒绝越界值。
+       // 硬边界用 M1 的真实精确域；i32 只作为可关闭的主动策略单独报错。
+       for (elem_idx, v) in flat.data.iter().enumerate() {

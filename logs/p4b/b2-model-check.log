@@ -1,0 +1,23 @@
+    Checking zkml v0.0.1 (/root/autodl-tmp/zkml-repro/src)
+error[E0382]: borrow of moved value: `config.tensors`
+   --> src/model.rs:512:38
+    |
+382 |       for flat in config.tensors {
+    |                   -------------- `config.tensors` moved due to this implicit call to `.into_iter()`
+...
+512 |       let initial_ids: BTreeSet<i64> = config
+    |  ______________________________________^
+513 | |       .tensors
+    | |______________^ value borrowed here after move
+    |
+note: the `for` loop is desugared into a call to `std::iter::IntoIterator::into_iter`, which takes ownership of the receiver `self`, which moves `config.tensors`
+   --> /rustc/f9ceb4a4d45a471eed7bd8c40dddb7c38e749e21/library/core/src/iter/traits/collect.rs:283:0
+    = note: move occurs because `config.tensors` has type `Vec<TensorMsgpack>`, which does not implement the `Copy` trait
+    = note: borrow occurs due to deref coercion to `[TensorMsgpack]`
+help: consider iterating over a slice of the `Vec<TensorMsgpack>`'s content to avoid moving into the `for` loop
+    |
+382 |     for flat in &config.tensors {
+    |                 +
+
+For more information about this error, try `rustc --explain E0382`.
+error: could not compile `zkml` (lib) due to 1 previous error

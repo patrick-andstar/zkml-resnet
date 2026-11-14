@@ -1,0 +1,127 @@
+{
+  "batch": "P4-B",
+  "title": "分层编译与 Max 最小用例",
+  "date": "2026-11-14",
+  "status": "partial",
+  "status_note": "编译四段与 Max 用例（§P4-B.1/.2）已完成；§P4-B.3 的模型级稀疏ID/元数据清理矩阵与 §P4-B.4 的大k纯配置校验【未开始】。",
+  "authorization": "用户 2026-11-14 23:24 指示「按照 plan.md 先去做好」，对应 plan §0 P0.2 / §4 P4-B。",
+  "not_authorized": "未运行完整目标模型、未生成 SRS、未做目标 configure/synthesize、未 setup/prove、未改密码协议。",
+
+  "remote": {
+    "host_fingerprint": "SHA256:EPstg8jNN+u3Bs1JyQOqlBeq3w+a4VynoJAe48YnIV0",
+    "fingerprint_check": "MATCH",
+    "checked_at": "2026-11-14T23:26:05+08:00",
+    "memory_max_bytes": 128849018880,
+    "memory_current_bytes_idle": 6321852416,
+    "cpu_max": "1600000 100000",
+    "disk_data_total": "50G",
+    "disk_data_avail": "46G",
+    "disk_system_avail": "30G"
+  },
+
+  "toolchain": {
+    "cargo": "1.101.0-nightly (31d3246e0 2026-10-27)",
+    "rustc": "1.101.0-nightly (f9ceb4a4d 2026-10-31)",
+    "channel": "nightly-2026-11-01",
+    "cargo_lock_sha256": "7d00bc54b3637d9daf7966b669e672ca1c642845d6d77d2d8a155112b2c1e205",
+    "jobs": 4,
+    "locked": true
+  },
+
+  "baseline_sha256": {
+    "src/gadgets/max.rs": "1e60cd14d5b4dbbf741ff0c274980224ee1729576545c16680a66efcd0510faa",
+    "src/model.rs": "05d75b45c32de00659c89c60a6e69b12bda4c00cd5766b63430afe632a87bc0e",
+    "src/layers/shape/pad.rs": "a9775783b43feb4d6c878c7d6cd6283f8cfb7ace51f1f50bb04f395565cd994d",
+    "python/converter.py": "38053886afe0bef2e5945b7d7d096c92ad931f224084a94e5b9f0d70af500039"
+  },
+  "baseline_note": "四份远端文件与本地补丁 base 逐字节一致，补丁才允许应用。",
+
+  "applied_sha256": {
+    "src/gadgets/max.rs": "970928e8a13520e402eaf34949b66e8913bf8aa505d3e77210da10738d0909db",
+    "src/model.rs": "19008b73701a7256350cbc191af3c1b9027f1698f75913472e66f3a3d345d8e0",
+    "src/layers/shape/pad.rs": "89fbf3c258ffc7c2f0097e98aa76b04600e353617e24c9e6f1923675f1afa529"
+  },
+
+  "candidates": {
+    "patches/max_reduce_fix_applied.rs": "970928e8a13520e402eaf34949b66e8913bf8aa505d3e77210da10738d0909db",
+    "patches/model_numeric_contract_v3.rs": "19008b73701a7256350cbc191af3c1b9027f1698f75913472e66f3a3d345d8e0",
+    "patches/model_numeric_contract_v3.diff": "bd20b1928849a23618f2a071e70d91b92148b86728765fbd060e2f008cecd223",
+    "patches/pad_contract_applied.rs": "89fbf3c258ffc7c2f0097e98aa76b04600e353617e24c9e6f1923675f1afa529",
+    "local_bins/p4b_max_test.rs": "49b6337e60d6677e1611b2f4984c9681c6963f0a63afa473854368d0e5aa8852",
+    "scripts/rch.py": "65321d59eda264294562f4624bad993cec3bb6dcea499eeec23aa55d96f60b19"
+  },
+  "candidate_identity_note": "_applied 后缀的三份是**实际编译通过的字节**，由远端回取；它们与 v2/max 候选文件的差异仅为行尾（CRLF→LF），可核对。model 由 v2 升为 v3，唯一改动是一处所有权修正。",
+
+  "results": [
+    {
+      "id": "B0",
+      "what": "pristine 基线 cargo check --locked -j 4",
+      "rc": 0,
+      "elapsed_s": 15.05,
+      "warnings": ["unused dependency halo2", "unused dependency serde_json"],
+      "note": "两条警告为上游 Cargo.toml 自带，与本批无关。基线可编译，故后续失败可归因于候选。"
+    },
+    {
+      "id": "B1",
+      "what": "叠加 max_reduce_fix 后 cargo check",
+      "rc": 0,
+      "note": "仅有上游原有警告；无新增。"
+    },
+    {
+      "id": "B2",
+      "what": "叠加 model_numeric_contract_v2 后 cargo check",
+      "rc": 101,
+      "first_error": "E0382 borrow of moved value: `config.tensors`（model.rs:382 move，512 借用）",
+      "fix": "for flat in config.tensors -> for flat in &config.tensors",
+      "fix_count": 1,
+      "rc_after_fix": 0,
+      "note": "整份 model 候选只差这 1 处所有权；其余全部通过类型/借用检查。这是文本门禁无法覆盖的部分。"
+    },
+    {
+      "id": "B3",
+      "what": "再叠加 pad_contract 后 cargo check",
+      "rc": 0,
+      "note": "patch 报 Stripping trailing CRs，说明补丁为 CRLF；已在候选身份中按实际编译字节固化。"
+    },
+    {
+      "id": "B4",
+      "what": "Max 最小用例：9 向量 × num_cols∈{3,6,12} × 正负对照，MockProver(k=12)",
+      "candidate": "TOTAL PASS (27/27)",
+      "original_max_rs": "TOTAL FAIL",
+      "original_failures": [
+        "G=2 (6列): 最小[0,1] FAIL；反例 x1=1其余0 FAIL",
+        "G=4 (12列): 最小[0,1] FAIL；反例 x1=1其余0 FAIL；奇数长度[1,2,3] FAIL",
+        "G=1 (3列): 全部 PASS"
+      ],
+      "note": "原版在 9元素-最大在首/最大在尾 等用例下也 PASS —— 缺陷是数据相关的，故端到端跑可能看起来正常。"
+    }
+  ],
+
+  "test_design": {
+    "encoding": "与 model.rs to_field 相同：F::from((x+2^31) as u64) - F::from(2^31)",
+    "shift_min_val": 64,
+    "num_rows": 1000,
+    "k": 12,
+    "binding": "输出用 constrain_instance 钉住宿主参考 max；算错必然使 MockProver 失败",
+    "negative_control": "每个用例另跑一次期望值 +1，必须被拒；否则该用例不记 PASS",
+    "note": "测试二进制保留 2 条无害警告（未用 import、未读字段），为保证原版与候选两臂使用同一份测试字节，未做清理式改动。"
+  },
+
+  "not_claimed": [
+    "cargo check 通过不等于电路正确：不做数值、约束与 cell 连线验证。",
+    "Max 用例只覆盖已测长度与已测输入，不等于 ResNet-18 maxpool 端到端正确。",
+    "未做 k 选型、未做定点误差、未生成 SRS、未 prove/verify。",
+    "未验证 §P4-B.3 的模型级稀疏 ID、元数据清理与 loader 边界矩阵。"
+  ],
+
+  "logs": {
+    "baseline": "/root/autodl-tmp/zkml-repro/logs/p4b/b0-baseline-check.log",
+    "max_only": "/root/autodl-tmp/zkml-repro/logs/p4b/b1-max-check.log",
+    "model": "/root/autodl-tmp/zkml-repro/logs/p4b/b2-model-check.log",
+    "pad": "/root/autodl-tmp/zkml-repro/logs/p4b/b3-pad-check.log",
+    "max_test_candidate": "/root/autodl-tmp/zkml-repro/logs/p4b/b4-max-test.log",
+    "max_test_original": "/root/autodl-tmp/zkml-repro/logs/p4b/b4-max-test-ORIGINAL.log"
+  },
+
+  "backup": "/root/autodl-tmp/zkml-repro/tmp/src-before-p4b-20261114232625.tgz (26653362 B)"
+}

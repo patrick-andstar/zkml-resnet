@@ -1,0 +1,145 @@
+== cmd: cargo check --locked -j 4 (pristine baseline) ==
+== start: 2026-11-14T23:26:47+08:00 ==
+   Compiling autocfg v1.5.1
+   Compiling libc v0.2.191
+   Compiling proc-macro2 v1.0.107
+    Checking cfg-if v1.0.5
+   Compiling quote v1.0.47
+   Compiling radium v0.7.0
+   Compiling zerocopy v0.8.63
+   Compiling unicode-ident v1.0.27
+   Compiling num-traits v0.2.19
+   Compiling crossbeam-utils v0.8.23
+    Checking tap v1.0.1
+   Compiling version_check v0.9.5
+    Checking wyz v0.5.1
+   Compiling generic-array v0.14.9
+    Checking getrandom v0.2.17
+   Compiling crossbeam-epoch v0.9.21
+    Checking rand_core v0.6.4
+    Checking funty v2.0.0
+    Checking subtle v2.6.1
+    Checking typenum v1.20.1
+    Checking bitvec v1.1.1
+   Compiling crossbeam-deque v0.8.8
+    Checking num-integer v0.1.47
+   Compiling rayon-core v1.13.0
+    Checking arrayvec v0.7.8
+   Compiling paste v1.0.15
+    Checking spin v0.9.9
+    Checking static_assertions v1.1.0
+    Checking constant_time_eq v0.4.2
+    Checking lazy_static v1.5.1
+    Checking blake2b_simd v1.0.5
+   Compiling syn v2.0.119
+    Checking block-padding v0.2.1
+    Checking ff v0.13.1
+    Checking once_cell v1.21.4
+    Checking group v0.13.0
+   Compiling serde_core v1.0.229
+   Compiling halo2curves v0.3.2 (https://github.com/privacy-scaling-explorations/halo2curves?tag=0.3.2#9f5c5081)
+    Checking tracing-core v0.1.36
+    Checking block-buffer v0.9.0
+    Checking digest v0.9.0
+    Checking num-bigint v0.4.8
+   Compiling crunchy v0.2.4
+    Checking opaque-debug v0.3.1
+    Checking pin-project-lite v0.2.17
+    Checking keccak v0.1.6
+    Checking either v1.19.0
+    Checking rayon v1.12.0
+    Checking ppv-lite86 v0.2.21
+    Checking sha3 v0.9.1
+    Checking rand_chacha v0.3.1
+    Checking rand v0.8.8
+    Checking pasta_curves v0.5.2
+   Compiling matrixmultiply v0.3.11
+   Compiling zmij v1.0.23
+   Compiling serde v1.0.229
+    Checking rawpointer v0.2.1
+    Checking hex v0.4.3
+    Checking byteorder v1.5.0
+   Compiling serde_json v1.0.154
+    Checking uint v0.9.5
+   Compiling syn v3.0.10
+   Compiling tracing-attributes v0.1.31
+    Checking rmp v0.8.15
+    Checking num-complex v0.4.6
+    Checking memchr v2.8.3
+    Checking itoa v1.0.19
+    Checking riff v1.0.1
+    Checking wav v1.0.1
+    Checking ndarray v0.15.6
+    Checking tracing v0.1.44
+    Checking halo2_proofs v0.2.0 (https://github.com/privacy-scaling-explorations/halo2?rev=17e9765c199670534c0299c96128d0464a188d0b#17e9765c)
+    Checking rmp-serde v1.3.1
+    Checking rounded-div v0.1.4
+   Compiling serde_derive v1.0.229
+    Checking halo2 v0.1.0-beta.2 (https://github.com/privacy-scaling-explorations/halo2?rev=17e9765c199670534c0299c96128d0464a188d0b#17e9765c)
+    Checking halo2_gadgets v0.2.0 (https://github.com/privacy-scaling-explorations/halo2?rev=17e9765c199670534c0299c96128d0464a188d0b#17e9765c)
+    Checking zkml v0.0.1 (/root/autodl-tmp/zkml-repro/src)
+warning: using `.clone()` on a double reference, which returns `&AssignedCell<F, F>` instead of cloning the inner type
+   --> src/gadgets/dot_prod.rs:189:77
+    |
+189 |               .op_row_region(&mut region, i, &vec![inp, weights], &vec![zero.clone()])
+    |                                                                             ^^^^^^^^
+    |
+    = note: `#[warn(suspicious_double_ref_op)]` on by default
+
+warning: call to `.clone()` on a reference in this situation does nothing
+  --> src/layers/arithmetic.rs:37:33
+   |
+37 |     let out_shape = inp1.shape().clone();
+   |                                 ^^^^^^^^ help: remove this redundant call
+   |
+   = note: the type `[usize]` does not implement `Clone`, so calling `clone` on `&[usize]` copies the reference, which does not do anything and can be removed
+   = note: `#[warn(noop_method_call)]` on by default
+
+warning: feature `int_roundings` is declared but not used
+ --> src/lib.rs:1:12
+  |
+1 | #![feature(int_roundings)]
+  |            ^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_features)]` (part of `#[warn(unused)]`) on by default
+
+warning: `zkml` (lib) generated 3 warnings (run `cargo fix --lib -p zkml` to apply 1 suggestion)
+warning: use of deprecated function `wav::read`: This project is no longer maintained, use the `hound` crate
+  --> src/bin/verify_wav.rs:17:30
+   |
+17 |   let (_header, data) = wav::read(&mut wav_file).unwrap();
+   |                              ^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+
+warning: use of deprecated tuple variant `wav::BitDepth::Sixteen`: This project is no longer maintained, use the `hound` crate
+  --> src/bin/verify_wav.rs:19:20
+   |
+19 |     wav::BitDepth::Sixteen(data) => data,
+   |                    ^^^^^^^
+
+warning: use of deprecated field `wav::BitDepth::Sixteen::0`: This project is no longer maintained, use the `hound` crate
+  --> src/bin/verify_wav.rs:19:28
+   |
+19 |     wav::BitDepth::Sixteen(data) => data,
+   |                            ^^^^
+
+warning: `zkml` (bin "verify_wav") generated 3 warnings
+warning: unused dependency `halo2`
+  --> Cargo.toml:24:1
+   |
+24 | halo2 = { git="https://github.com/privacy-scaling-explorations/halo2", package="halo2", rev="17e9765c199670534c0299c96128d0464a188d0...
+   | ^^^^^
+   |
+   = note: `cargo::unused_dependencies` is set to `warn` by default
+help: consider removing the dependency on `halo2`
+warning: unused dependency `serde_json`
+  --> Cargo.toml:37:1
+   |
+37 | serde_json = "1.0.85"
+   | ^^^^^^^^^^
+   |
+help: consider removing the dependency on `serde_json`
+warning: `zkml` (manifest) generated 2 warnings
+    Finished `dev` profile [optimized + debuginfo] target(s) in 15.05s
+== end: 2026-11-14T23:27:02+08:00 rc=0 ==
