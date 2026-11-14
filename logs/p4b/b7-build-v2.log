@@ -1,0 +1,46 @@
+== cmd: cargo build --offline --locked -j 4 --bin p4b_max_test_v2 ==
+== src combination ==
+970928e8a13520e402eaf34949b66e8913bf8aa505d3e77210da10738d0909db  src/gadgets/max.rs
+1b0d3232c9a86000dbe02e90dd7124c746027b804b350d4788ec77a06b1f9770  src/model.rs
+89fbf3c258ffc7c2f0097e98aa76b04600e353617e24c9e6f1923675f1afa529  src/layers/shape/pad.rs
+== driver sha ==
+f937aa2bc89ca2400d0a6ea14e180990176243da6a504e87a2af45d6438b8d2c  src/bin/p4b_max_test_v2.rs
+== start: 2026-11-15T00:48:26+08:00 ==
+   Compiling zkml v0.0.1 (/root/autodl-tmp/zkml-repro/src)
+warning: using `.clone()` on a double reference, which returns `&AssignedCell<F, F>` instead of cloning the inner type
+   --> src/gadgets/dot_prod.rs:189:77
+    |
+189 |               .op_row_region(&mut region, i, &vec![inp, weights], &vec![zero.clone()])
+    |                                                                             ^^^^^^^^
+    |
+    = note: `#[warn(suspicious_double_ref_op)]` on by default
+
+warning: call to `.clone()` on a reference in this situation does nothing
+  --> src/layers/arithmetic.rs:37:33
+   |
+37 |     let out_shape = inp1.shape().clone();
+   |                                 ^^^^^^^^ help: remove this redundant call
+   |
+   = note: the type `[usize]` does not implement `Clone`, so calling `clone` on `&[usize]` copies the reference, which does not do anything and can be removed
+   = note: `#[warn(noop_method_call)]` on by default
+
+warning: feature `int_roundings` is declared but not used
+ --> src/lib.rs:1:12
+  |
+1 | #![feature(int_roundings)]
+  |            ^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_features)]` (part of `#[warn(unused)]`) on by default
+
+warning: `zkml` (lib) generated 3 warnings (run `cargo fix --lib -p zkml` to apply 1 suggestion)
+warning: unused import: `ff::PrimeField`
+  --> src/bin/p4b_max_test_v2.rs:25:28
+   |
+25 |   halo2curves::{bn256::Fr, ff::PrimeField},
+   |                            ^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `zkml` (bin "p4b_max_test_v2") generated 1 warning (run `cargo fix --bin "p4b_max_test_v2" -p zkml` to apply 1 suggestion)
+    Finished `dev` profile [optimized + debuginfo] target(s) in 55.65s
+== end: 2026-11-15T00:49:22+08:00 rc=0 ==

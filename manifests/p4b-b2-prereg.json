@@ -1,7 +1,7 @@
 {
   "batch": "P4-B.2 扩展（预登记 rev2）",
   "date": "2026-11-15",
-  "status": "registered_revised_driver",
+  "status": "executed_passed",
   "note": "rev2 按用户 2026-11-15 00:46 的六点修订测试驱动判据。预期值未改，只改判据与失败分类。",
   "revision_log": [
     "A 矩阵负臂：由 `!= Ok` 改为必须 `VerifyErr`；正臂必须 `Ok` 且失败后不再跑负臂。",
@@ -20,30 +20,299 @@
     "reuse_old_result": false
   },
   "matrix_a_max_independent": {
-    "columns": [3, 6, 9, 12],
+    "columns": [
+      3,
+      6,
+      9,
+      12
+    ],
     "column_note": "9 列（G=3）是新增档",
     "vectors": [
-      {"id": "L1", "data": [0], "n": 1},
-      {"id": "L2", "data": [5, 1], "n": 2},
-      {"id": "L3", "data": [1, 2, 3], "n": 3},
-      {"id": "L4", "data": [3, 1, 2, 3], "n": 4, "note": "并列最大在 0 与 3"},
-      {"id": "L5", "data": [-5, -1, -3, -16, 0], "n": 5, "note": "混合含负"},
-      {"id": "L6", "data": [1, 5, 2, 4, 3, 0], "n": 6},
-      {"id": "L7", "data": [7, 1, 2, 3, 4, 5, 6], "n": 7},
-      {"id": "L8", "data": [0, 1, 2, 3, 4, 5, 6, 7], "n": 8},
-      {"id": "P0", "data": [9, 0, 0, 0, 0, 0, 0, 0, 0], "n": 9},
-      {"id": "P1", "data": [0, 9, 0, 0, 0, 0, 0, 0, 0], "n": 9},
-      {"id": "P2", "data": [0, 0, 9, 0, 0, 0, 0, 0, 0], "n": 9},
-      {"id": "P3", "data": [0, 0, 0, 9, 0, 0, 0, 0, 0], "n": 9},
-      {"id": "P4", "data": [0, 0, 0, 0, 9, 0, 0, 0, 0], "n": 9},
-      {"id": "P5", "data": [0, 0, 0, 0, 0, 9, 0, 0, 0], "n": 9},
-      {"id": "P6", "data": [0, 0, 0, 0, 0, 0, 9, 0, 0], "n": 9},
-      {"id": "P7", "data": [0, 0, 0, 0, 0, 0, 0, 9, 0], "n": 9},
-      {"id": "P8", "data": [0, 0, 0, 0, 0, 0, 0, 0, 9], "n": 9},
-      {"id": "T1", "data": [3, 3, 3, 3, 3, 3, 3, 3, 3], "n": 9, "note": "全等"},
-      {"id": "T2", "data": [0, 0, 0, 0, 0, 0, 0, 0, 0], "n": 9, "note": "全零"},
-      {"id": "T3", "data": [-1, -2, -3, -4, -5, -6, -7, -8, -9], "n": 9, "note": "全负，max=-1"},
-      {"id": "T4", "data": [1, 9, 0, 0, 9, 0, 0, 0, 0], "n": 9, "note": "双峰"}
+      {
+        "id": "L1",
+        "data": [
+          0
+        ],
+        "n": 1
+      },
+      {
+        "id": "L2",
+        "data": [
+          5,
+          1
+        ],
+        "n": 2
+      },
+      {
+        "id": "L3",
+        "data": [
+          1,
+          2,
+          3
+        ],
+        "n": 3
+      },
+      {
+        "id": "L4",
+        "data": [
+          3,
+          1,
+          2,
+          3
+        ],
+        "n": 4,
+        "note": "并列最大在 0 与 3"
+      },
+      {
+        "id": "L5",
+        "data": [
+          -5,
+          -1,
+          -3,
+          -16,
+          0
+        ],
+        "n": 5,
+        "note": "混合含负"
+      },
+      {
+        "id": "L6",
+        "data": [
+          1,
+          5,
+          2,
+          4,
+          3,
+          0
+        ],
+        "n": 6
+      },
+      {
+        "id": "L7",
+        "data": [
+          7,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "n": 7
+      },
+      {
+        "id": "L8",
+        "data": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "n": 8
+      },
+      {
+        "id": "P0",
+        "data": [
+          9,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "n": 9
+      },
+      {
+        "id": "P1",
+        "data": [
+          0,
+          9,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "n": 9
+      },
+      {
+        "id": "P2",
+        "data": [
+          0,
+          0,
+          9,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "n": 9
+      },
+      {
+        "id": "P3",
+        "data": [
+          0,
+          0,
+          0,
+          9,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "n": 9
+      },
+      {
+        "id": "P4",
+        "data": [
+          0,
+          0,
+          0,
+          0,
+          9,
+          0,
+          0,
+          0,
+          0
+        ],
+        "n": 9
+      },
+      {
+        "id": "P5",
+        "data": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          9,
+          0,
+          0,
+          0
+        ],
+        "n": 9
+      },
+      {
+        "id": "P6",
+        "data": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          9,
+          0,
+          0
+        ],
+        "n": 9
+      },
+      {
+        "id": "P7",
+        "data": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          9,
+          0
+        ],
+        "n": 9
+      },
+      {
+        "id": "P8",
+        "data": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          9
+        ],
+        "n": 9
+      },
+      {
+        "id": "T1",
+        "data": [
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3
+        ],
+        "n": 9,
+        "note": "全等"
+      },
+      {
+        "id": "T2",
+        "data": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "n": 9,
+        "note": "全零"
+      },
+      {
+        "id": "T3",
+        "data": [
+          -1,
+          -2,
+          -3,
+          -4,
+          -5,
+          -6,
+          -7,
+          -8,
+          -9
+        ],
+        "n": 9,
+        "note": "全负，max=-1"
+      },
+      {
+        "id": "T4",
+        "data": [
+          1,
+          9,
+          0,
+          0,
+          9,
+          0,
+          0,
+          0,
+          0
+        ],
+        "n": 9,
+        "note": "双峰"
+      }
     ],
     "arms": {
       "positive": "instance = host max(vector)，**必须 Kind::Ok**；失败即停，不再跑负臂",
@@ -55,12 +324,51 @@
   },
   "matrix_b_numeric_boundary": {
     "why_separate_config": "shift=+64 时 (-shift) as u64 = 2^64-64，宿主不溢出要求 v<=63；查表是 [0,999]，测 999/1000 必然 v>63 会先撞 convert_to_u64 单 limb 上限。故边界必须换 shift。",
-    "config": {"shift_min_val": 1024, "num_rows": 1000, "num_cols": 6, "k": 12},
+    "config": {
+      "shift_min_val": 1024,
+      "num_rows": 1000,
+      "num_cols": 6,
+      "k": 12
+    },
     "cases": [
-      {"id": "B1", "data": [0, 999], "expected": "Ok", "note": "差 999，表内最大差值"},
-      {"id": "B2", "data": [0, 1000], "expected": "VerifyErr", "must_have": "至少 1 条 VerifyFailure::Lookup", "note": "差 1000 超出表，必须是 lookup 拒绝而非任意约束错"},
-      {"id": "B3", "data": [0, 1024], "expected": "Panic", "must_have": "panic 位置以 gadgets/gadget.rs 结尾", "note": "v+offset=2^64，convert_to_u64 单 limb 越界"},
-      {"id": "B4", "data": [1000, 1000], "expected": "Ok", "note": "差 0，仍会查表（0 在表内），不是『不查表』"}
+      {
+        "id": "B1",
+        "data": [
+          0,
+          999
+        ],
+        "expected": "Ok",
+        "note": "差 999，表内最大差值"
+      },
+      {
+        "id": "B2",
+        "data": [
+          0,
+          1000
+        ],
+        "expected": "VerifyErr",
+        "must_have": "至少 1 条 VerifyFailure::Lookup",
+        "note": "差 1000 超出表，必须是 lookup 拒绝而非任意约束错"
+      },
+      {
+        "id": "B3",
+        "data": [
+          0,
+          1024
+        ],
+        "expected": "Panic",
+        "must_have": "panic 位置以 gadgets/gadget.rs 结尾",
+        "note": "v+offset=2^64，convert_to_u64 单 limb 越界"
+      },
+      {
+        "id": "B4",
+        "data": [
+          1000,
+          1000
+        ],
+        "expected": "Ok",
+        "note": "差 0，仍会查表（0 在表内），不是『不查表』"
+      }
     ],
     "failure_taxonomy": [
       "Kind::Ok",
@@ -78,10 +386,21 @@
       "expected": "Kind::RunErrSynthesis",
       "detail": "只认 Error::Synthesis；其它 RunErr 记 FAIL",
       "runs": 4,
-      "columns": [3, 6, 9, 12]
+      "columns": [
+        3,
+        6,
+        9,
+        12
+      ]
     },
     "illegal_columns": {
-      "cases": [4, 5, 7, 2, 0],
+      "cases": [
+        4,
+        5,
+        7,
+        2,
+        0
+      ],
       "expected": "Kind::Panic",
       "must_have": "panic 位置以 gadgets/max.rs 结尾（MaxChip::configure 的 assert）",
       "anti_pattern": "不得由测试驱动的 unsupported num_cols 分支拒绝；MaxTestRaw<N> 内不做 3 的倍数预检",
@@ -92,10 +411,18 @@
   "matrix_d_pad_to_max": {
     "included_here": false,
     "moved_to": "B.3（作为独立子项报告）",
-    "distinctions": ["Rust 组合通过", "model 加载回归", "Python 图保护", "真实 TFLite 转换"],
+    "distinctions": [
+      "Rust 组合通过",
+      "model 加载回归",
+      "Python 图保护",
+      "真实 TFLite 转换"
+    ],
     "distinction_note": "四者分别报告，不能互相替代"
   },
-  "totals": {"runs": 181, "budget": "预计 <60 s、峰值 RSS <1 GiB；这是预算估计，不是已测结果"},
+  "totals": {
+    "runs": 181,
+    "budget": "预计 <60 s、峰值 RSS <1 GiB；这是预算估计，不是已测结果"
+  },
   "stop_conditions": [
     "任一用例结果与预登记 kind 不符 → 立即非零退出，不继续",
     "正臂失败 → 立即停，不跑该组合的负臂",
@@ -111,6 +438,51 @@
     "reuse_toolchain_cache_target": true,
     "no_dependency_download": true,
     "no_lockfile_update": true,
-    "not_run": ["converter", "真实 TFLite 转换", "目标模型", "SRS", "prove/verify"]
+    "not_run": [
+      "converter",
+      "真实 TFLite 转换",
+      "目标模型",
+      "SRS",
+      "prove/verify"
+    ]
+  },
+  "result": {
+    "when": "2026-11-15T00:49:32+08:00",
+    "binary": "$CARGO_TARGET_DIR/debug/p4b_max_test_v2",
+    "binary_sha256_prefix": "bf21c1d85454c57f",
+    "source_combination": {
+      "max": "970928e8a13520e4",
+      "model_v5": "1b0d3232c9a86000",
+      "pad": "89fbf3c258ffc7c2"
+    },
+    "build": {
+      "rc": 0,
+      "elapsed_s": 55.65,
+      "log": "logs/p4b/b7-build-v2.log",
+      "log_sha256_prefix": "b676eeb40a3a2dfe",
+      "warnings": "4 条具体诊断（3 条上游原有 + 1 条本测试 bin 的未使用 import）+ 2 条汇总行；注意汇总行有单数 `1 warning`"
+    },
+    "run": {
+      "rc": 0,
+      "elapsed_s": 1,
+      "log": "logs/p4b/b8-run-v2.log",
+      "log_sha256_prefix": "99557bd4e093ea70",
+      "total_runs": 181,
+      "expected_runs": 181,
+      "verdict": "PASS（所有用例符合预登记）"
+    },
+    "highlights": {
+      "A": "168/168：正臂全 Ok，负臂全 VerifyErr（2 条门/实例失败，0 条 Lookup，符合预期）",
+      "B2": "VerifyErr 且 Lookup=1 —— 正是目标查表拒绝，不是任意约束错",
+      "B3": "Panic@src/gadgets/gadget.rs:77 payload=\"explicit panic\" —— **不是空串**，用户预判正确",
+      "C1": "4/4 Error::Synthesis",
+      "C2": "5/5 Panic@src/gadgets/max.rs 的 assert（67/73 行），带断言文本"
+    },
+    "not_proven": [
+      "不覆盖 Pad→Max 组合（并入 B.3）",
+      "不覆盖 model 加载/稀疏ID/config-only",
+      "不覆盖真实 TFLite 转换",
+      "单一 k=12、单机、单次运行"
+    ]
   }
 }

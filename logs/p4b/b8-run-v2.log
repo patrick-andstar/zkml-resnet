@@ -1,0 +1,204 @@
+== cmd: /root/autodl-tmp/zkml-repro/target/debug/p4b_max_test_v2 ==
+== binary sha ==
+bf21c1d85454c57f2c2b2e90f32b3edeb3838b03b8aec8eed601c5521f19244a  /root/autodl-tmp/zkml-repro/target/debug/p4b_max_test_v2
+== start: 2026-11-15T00:49:32+08:00 ==
+driver  = p4b_max_test_v2 (rev2)
+device  = MockProver(k=12)
+prereg  = manifests/p4b-b2-prereg.json
+
+=== A: Max 独立（21 向量 x 4 列数 x 正负两臂）===
+-- num_cols=3 (G=1) --
+  A/3/L1 正臂 max=0                          OK
+  A/3/L1 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/3/L2 正臂 max=5                          OK
+  A/3/L2 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/3/L3 正臂 max=3                          OK
+  A/3/L3 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/3/L4 正臂 max=3                          OK
+  A/3/L4 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/3/L5 正臂 max=0                          OK
+  A/3/L5 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/3/L6 正臂 max=5                          OK
+  A/3/L6 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/3/L7 正臂 max=7                          OK
+  A/3/L7 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/3/L8 正臂 max=7                          OK
+  A/3/L8 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/3/P0 正臂 max=9                          OK
+  A/3/P0 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/3/P1 正臂 max=9                          OK
+  A/3/P1 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/3/P2 正臂 max=9                          OK
+  A/3/P2 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/3/P3 正臂 max=9                          OK
+  A/3/P3 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/3/P4 正臂 max=9                          OK
+  A/3/P4 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/3/P5 正臂 max=9                          OK
+  A/3/P5 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/3/P6 正臂 max=9                          OK
+  A/3/P6 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/3/P7 正臂 max=9                          OK
+  A/3/P7 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/3/P8 正臂 max=9                          OK
+  A/3/P8 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/3/T1 正臂 max=3                          OK
+  A/3/T1 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/3/T2 正臂 max=0                          OK
+  A/3/T2 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/3/T3 正臂 max=-1                         OK
+  A/3/T3 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/3/T4 正臂 max=9                          OK
+  A/3/T4 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+-- num_cols=6 (G=2) --
+  A/6/L1 正臂 max=0                          OK
+  A/6/L1 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/6/L2 正臂 max=5                          OK
+  A/6/L2 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/6/L3 正臂 max=3                          OK
+  A/6/L3 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/6/L4 正臂 max=3                          OK
+  A/6/L4 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/6/L5 正臂 max=0                          OK
+  A/6/L5 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/6/L6 正臂 max=5                          OK
+  A/6/L6 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/6/L7 正臂 max=7                          OK
+  A/6/L7 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/6/L8 正臂 max=7                          OK
+  A/6/L8 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/6/P0 正臂 max=9                          OK
+  A/6/P0 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/6/P1 正臂 max=9                          OK
+  A/6/P1 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/6/P2 正臂 max=9                          OK
+  A/6/P2 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/6/P3 正臂 max=9                          OK
+  A/6/P3 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/6/P4 正臂 max=9                          OK
+  A/6/P4 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/6/P5 正臂 max=9                          OK
+  A/6/P5 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/6/P6 正臂 max=9                          OK
+  A/6/P6 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/6/P7 正臂 max=9                          OK
+  A/6/P7 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/6/P8 正臂 max=9                          OK
+  A/6/P8 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/6/T1 正臂 max=3                          OK
+  A/6/T1 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/6/T2 正臂 max=0                          OK
+  A/6/T2 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/6/T3 正臂 max=-1                         OK
+  A/6/T3 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/6/T4 正臂 max=9                          OK
+  A/6/T4 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+-- num_cols=9 (G=3) --
+  A/9/L1 正臂 max=0                          OK
+  A/9/L1 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/9/L2 正臂 max=5                          OK
+  A/9/L2 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/9/L3 正臂 max=3                          OK
+  A/9/L3 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/9/L4 正臂 max=3                          OK
+  A/9/L4 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/9/L5 正臂 max=0                          OK
+  A/9/L5 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/9/L6 正臂 max=5                          OK
+  A/9/L6 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/9/L7 正臂 max=7                          OK
+  A/9/L7 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/9/L8 正臂 max=7                          OK
+  A/9/L8 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/9/P0 正臂 max=9                          OK
+  A/9/P0 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/9/P1 正臂 max=9                          OK
+  A/9/P1 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/9/P2 正臂 max=9                          OK
+  A/9/P2 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/9/P3 正臂 max=9                          OK
+  A/9/P3 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/9/P4 正臂 max=9                          OK
+  A/9/P4 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/9/P5 正臂 max=9                          OK
+  A/9/P5 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/9/P6 正臂 max=9                          OK
+  A/9/P6 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/9/P7 正臂 max=9                          OK
+  A/9/P7 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/9/P8 正臂 max=9                          OK
+  A/9/P8 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/9/T1 正臂 max=3                          OK
+  A/9/T1 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/9/T2 正臂 max=0                          OK
+  A/9/T2 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/9/T3 正臂 max=-1                         OK
+  A/9/T3 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+  A/9/T4 正臂 max=9                          OK
+  A/9/T4 负臂 max+1                          VerifyErr(总 2 条, Lookup 0 条)
+-- num_cols=12 (G=4) --
+  A/12/L1 正臂 max=0                         OK
+  A/12/L1 负臂 max+1                         VerifyErr(总 2 条, Lookup 0 条)
+  A/12/L2 正臂 max=5                         OK
+  A/12/L2 负臂 max+1                         VerifyErr(总 2 条, Lookup 0 条)
+  A/12/L3 正臂 max=3                         OK
+  A/12/L3 负臂 max+1                         VerifyErr(总 2 条, Lookup 0 条)
+  A/12/L4 正臂 max=3                         OK
+  A/12/L4 负臂 max+1                         VerifyErr(总 2 条, Lookup 0 条)
+  A/12/L5 正臂 max=0                         OK
+  A/12/L5 负臂 max+1                         VerifyErr(总 2 条, Lookup 0 条)
+  A/12/L6 正臂 max=5                         OK
+  A/12/L6 负臂 max+1                         VerifyErr(总 2 条, Lookup 0 条)
+  A/12/L7 正臂 max=7                         OK
+  A/12/L7 负臂 max+1                         VerifyErr(总 2 条, Lookup 0 条)
+  A/12/L8 正臂 max=7                         OK
+  A/12/L8 负臂 max+1                         VerifyErr(总 2 条, Lookup 0 条)
+  A/12/P0 正臂 max=9                         OK
+  A/12/P0 负臂 max+1                         VerifyErr(总 2 条, Lookup 0 条)
+  A/12/P1 正臂 max=9                         OK
+  A/12/P1 负臂 max+1                         VerifyErr(总 2 条, Lookup 0 条)
+  A/12/P2 正臂 max=9                         OK
+  A/12/P2 负臂 max+1                         VerifyErr(总 2 条, Lookup 0 条)
+  A/12/P3 正臂 max=9                         OK
+  A/12/P3 负臂 max+1                         VerifyErr(总 2 条, Lookup 0 条)
+  A/12/P4 正臂 max=9                         OK
+  A/12/P4 负臂 max+1                         VerifyErr(总 2 条, Lookup 0 条)
+  A/12/P5 正臂 max=9                         OK
+  A/12/P5 负臂 max+1                         VerifyErr(总 2 条, Lookup 0 条)
+  A/12/P6 正臂 max=9                         OK
+  A/12/P6 负臂 max+1                         VerifyErr(总 2 条, Lookup 0 条)
+  A/12/P7 正臂 max=9                         OK
+  A/12/P7 负臂 max+1                         VerifyErr(总 2 条, Lookup 0 条)
+  A/12/P8 正臂 max=9                         OK
+  A/12/P8 负臂 max+1                         VerifyErr(总 2 条, Lookup 0 条)
+  A/12/T1 正臂 max=3                         OK
+  A/12/T1 负臂 max+1                         VerifyErr(总 2 条, Lookup 0 条)
+  A/12/T2 正臂 max=0                         OK
+  A/12/T2 负臂 max+1                         VerifyErr(总 2 条, Lookup 0 条)
+  A/12/T3 正臂 max=-1                        OK
+  A/12/T3 负臂 max+1                         VerifyErr(总 2 条, Lookup 0 条)
+  A/12/T4 正臂 max=9                         OK
+  A/12/T4 负臂 max+1                         VerifyErr(总 2 条, Lookup 0 条)
+
+=== B: 数值边界（shift=1024, num_rows=1000, 6 列）===
+  B1 [0,999] 差 999 应通过                     OK
+  B2 [0,1000] 差 1000 应 Lookup 拒绝           VerifyErr(总 1 条, Lookup 1 条)
+  B3 [0,1024] 宿主溢出 panic                   Panic@src/gadgets/gadget.rs:77 msg="explicit panic"
+  B4 [1000,1000] 差 0 应通过                   OK
+
+=== C1: 空输入（必须 Error::Synthesis）===
+  C1/3/空输入                                 RunErr(Synthesis)
+  C1/6/空输入                                 RunErr(Synthesis)
+  C1/9/空输入                                 RunErr(Synthesis)
+  C1/12/空输入                                RunErr(Synthesis)
+
+=== C2: 非法列数（必须打到 MaxChip::configure）===
+  C2/4 列                                   Panic@src/gadgets/max.rs:73 msg="assertion `left == right` failed: MaxChip requires columns.len() to be a multiple of 3, got 4\n  left: 1\n right: 0"
+  C2/5 列                                   Panic@src/gadgets/max.rs:73 msg="assertion `left == right` failed: MaxChip requires columns.len() to be a multiple of 3, got 5\n  left: 2\n right: 0"
+  C2/7 列                                   Panic@src/gadgets/max.rs:73 msg="assertion `left == right` failed: MaxChip requires columns.len() to be a multiple of 3, got 7\n  left: 1\n right: 0"
+  C2/2 列                                   Panic@src/gadgets/max.rs:67 msg="MaxChip requires at least 3 advice columns, got 2"
+  C2/0 列                                   Panic@src/gadgets/max.rs:67 msg="MaxChip requires at least 3 advice columns, got 0"
+
+total runs = 181 (预登记 181)
+TOTAL: PASS（所有用例符合预登记）
+== end: 2026-11-15T00:49:33+08:00 rc=0 elapsed=1s ==
