@@ -1,0 +1,142 @@
+{
+  "batch": "P4-B.3.1",
+  "title": "model 加载期契约回归（含 v3 负向对照）",
+  "date": "2026-11-15",
+  "scope": "只调用 ModelCircuit::generate_from_msgpack；不 configure、不 MockProver、不合成、不转真模型。",
+  "why_safe": "generate_from_msgpack 只做解析与校验；大表在 configure/synthesize 才建。本批完全不进入那两段。",
+  "config": {
+    "k": 6,
+    "num_cols": 6,
+    "global_sf": 1,
+    "layer_type": "Noop",
+    "num_rows": 55,
+    "max_val": 22,
+    "shift": 64
+  },
+  "drivers": {
+    "main": {
+      "file": "local_bins/p4b_model_load_test.rs",
+      "remote": "src/bin/p4b_model_load_test.rs",
+      "sha256_prefix": "e10a5ed3e9e14a5b",
+      "note": "11 例带断言，引用 v5 的 unresolved_commit_ids 字段"
+    },
+    "control": {
+      "file": "local_bins/p4b_model_load_ctl.rs",
+      "remote": "src/bin/p4b_model_load_ctl.rs",
+      "note": "不引用 v5 专有字段，可在 v3/v4/v5 上编译；只打印 ok/panic 不做断言"
+    }
+  },
+  "cases": [
+    {
+      "id": 1,
+      "what": "合法稀疏图 初始{0,2}→L0产1",
+      "v5": "Ok",
+      "v3": "Ok",
+      "discriminates": false,
+      "note": "**不具区分力**：v2/v3 的缺陷在 tensor_map_to_vec（synthesize 期）才触发，本驱动不覆盖"
+    },
+    {
+      "id": 2,
+      "what": "缺依赖（FullWitness）",
+      "v5": "Panic",
+      "v3": "Panic 同文本",
+      "discriminates": false
+    },
+    {
+      "id": 3,
+      "what": "未来引用 L0 消费 L1 产出",
+      "v5": "Panic「不允许引用自身或未来层的输出」",
+      "v3": "Panic「既不在初始张量」",
+      "discriminates": true,
+      "how": "文本不同：v3 走的是可用性检查，没有专门的未来引用判据"
+    },
+    {
+      "id": 4,
+      "what": "重复产出",
+      "v5": "Panic「重复产出」",
+      "v3": "**Ok**",
+      "discriminates": true
+    },
+    {
+      "id": 5,
+      "what": "config-only 结构合法",
+      "v5": "**Ok**",
+      "v3": "Panic",
+      "discriminates": true,
+      "how": "v3 无模式区分，把缺省权重当缺依赖"
+    },
+    {
+      "id": 6,
+      "what": "FullWitness 权重缺席",
+      "v5": "Panic",
+      "v3": "Panic 同文本",
+      "discriminates": false
+    },
+    {
+      "id": 7,
+      "what": "config-only before 引用层产出",
+      "v5": "Panic「before 在 DAG 之前求值」",
+      "v3": "Panic「既不在初始张量」",
+      "discriminates": true,
+      "how": "v3 在权重 99 处就先崩，根本没走到 commit 检查"
+    },
+    {
+      "id": 8,
+      "what": "config-only after 引用层产出",
+      "v5": "**Ok**",
+      "v3": "Panic",
+      "discriminates": true
+    },
+    {
+      "id": 9,
+      "what": "config-only after 未解析常量",
+      "v5": "**Ok** 且 unresolved 含 77",
+      "v3": "Panic",
+      "discriminates": true
+    },
+    {
+      "id": 10,
+      "what": "config-only before 未解析常量",
+      "v5": "**Ok** 且 unresolved 含 77",
+      "v3": "Panic",
+      "discriminates": true
+    },
+    {
+      "id": 11,
+      "what": "FullWitness before 初始张量",
+      "v5": "Ok 且 unresolved 空",
+      "v3": "Ok",
+      "discriminates": false
+    }
+  ],
+  "results": {
+    "v5_main": {
+      "rc": 0,
+      "verdict": "11/11 PASS",
+      "log": "logs/p4b/b11-model-load-v5.log",
+      "log_sha256_prefix": "132fe2845d7e4d28"
+    },
+    "v3_control": {
+      "rc": 0,
+      "verdict": "控制驱动只打印，无断言",
+      "log": "logs/p4b/b10-model-load-NEGATIVE-v3.log",
+      "log_sha256_prefix": "8d3396e0c74d2b6e"
+    },
+    "discrimination": "11 例中 6 例在 v3 下行为翻转或理由不同；5 例两边一致（其中 1、2、6、11 是公用路径，c1 另见限制）",
+    "checksum_note": "初稿把两份日志摘要写反了（cut -c1-16 截两行输出时对调）；已按 sha256sum 逐文件核对改正。"
+  },
+  "source_identity": {
+    "v5": "1b0d3232c9a86000",
+    "v3_control": "19008b73701a7256",
+    "restored_after_control": "1b0d3232c9a86000",
+    "note": "负向对照后已把 model.rs 还原为 v5 并核对摘要"
+  },
+  "limitations": [
+    "**不覆盖 synthesize**：v2/v3 的空洞 panic（M7）发生在 tensor_map_to_vec，本驱动不调用它；因此 c1 在 v3 下同样是 Ok。",
+    "不覆盖 configure / MockProver / 约束。",
+    "不覆盖真实 TFLite、converter、Pad→Max 组合。",
+    "k=6 小配置，不外推到目标 k。",
+    "控制驱动的对比是文本与 ok/panic，不是自动化断言；结论来自两轮人工对照。"
+  ],
+  "conclusion": "v5 在 11 个加载期用例上全部符合预登记；其中 6 个用例在 v3 上会失败或给出不同理由，说明这组用例不是空转。但 c1（稀疏图）的区分力未被证明，它守的缺陷在 synthesize 期。"
+}

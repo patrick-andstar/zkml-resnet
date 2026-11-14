@@ -1,0 +1,41 @@
+== negative control: model=v3 19008b73, driver=p4b_model_load_ctl (n/t) ==
+== start: 2026-11-15T00:57:44+08:00 ==
+19008b73701a7256350cbc191af3c1b9027f1698f75913472e66f3a3d345d8e0  src/model.rs
+warning: using `.clone()` on a double reference, which returns `&AssignedCell<F, F>` instead of cloning the inner type
+   --> src/gadgets/dot_prod.rs:189:77
+    |
+189 |               .op_row_region(&mut region, i, &vec![inp, weights], &vec![zero.clone()])
+    |                                                                             ^^^^^^^^
+    |
+    = note: `#[warn(suspicious_double_ref_op)]` on by default
+
+warning: call to `.clone()` on a reference in this situation does nothing
+  --> src/layers/arithmetic.rs:37:33
+   |
+37 |     let out_shape = inp1.shape().clone();
+   |                                 ^^^^^^^^ help: remove this redundant call
+   |
+   = note: the type `[usize]` does not implement `Clone`, so calling `clone` on `&[usize]` copies the reference, which does not do anything and can be removed
+   = note: `#[warn(noop_method_call)]` on by default
+
+warning: feature `int_roundings` is declared but not used
+ --> src/lib.rs:1:12
+  |
+1 | #![feature(int_roundings)]
+  |            ^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_features)]` (part of `#[warn(unused)]`) on by default
+
+control driver（不引用 unresolved_commit_ids）
+  c1 稀疏图 {0,2}->L0产1                 Ok
+  c2 缺依赖                             Panic  layer 0 的输入 tensor 5 既不在初始张量、也没有更早的层产出；若这是删元数据
+  c3 未来引用                            Panic  layer 0 的输入 tensor 7 既不在初始张量、也没有更早的层产出；若这是删元数据
+  c4 重复产出                            Ok
+  c5 config-only 结构合法                Panic  layer 0 的输入 tensor 99 既不在初始张量、也没有更早的层产出；若这是删元数
+  c6 FullWitness 权重缺席                Panic  layer 0 的输入 tensor 99 既不在初始张量、也没有更早的层产出；若这是删元数
+  c7 config-only before 引用产出         Panic  layer 0 的输入 tensor 99 既不在初始张量、也没有更早的层产出；若这是删元数
+  c8 config-only after 引用产出          Panic  layer 0 的输入 tensor 99 既不在初始张量、也没有更早的层产出；若这是删元数
+  c9 config-only after 未解析常量         Panic  layer 0 的输入 tensor 99 既不在初始张量、也没有更早的层产出；若这是删元数
+  c10 config-only before 未解析常量       Panic  layer 0 的输入 tensor 99 既不在初始张量、也没有更早的层产出；若这是删元数
+  c11 FullWitness before 初始张量        Ok
+== end rc=0 ==
