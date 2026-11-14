@@ -99,12 +99,44 @@
 
   "test_design": {
     "encoding": "与 model.rs to_field 相同：F::from((x+2^31) as u64) - F::from(2^31)",
-    "shift_min_val": 64,
-    "num_rows": 1000,
+    "shift_min_val_hand_set": 64,
+    "shift_actual_offset": "max.rs 用 F::from((-shift_min_val) as u64) 作偏移，+64 实际得到 2^64-64，不是 +64",
+    "lookup_table_actual": "[0, 999]（num_rows=1000），不是生产公式在 k=12 的 [0, 4086]",
     "k": 12,
     "binding": "输出用 constrain_instance 钉住宿主参考 max；算错必然使 MockProver 失败",
     "negative_control": "每个用例另跑一次期望值 +1，必须被拒；否则该用例不记 PASS",
-    "note": "测试二进制保留 2 条无害警告（未用 import、未读字段），为保证原版与候选两臂使用同一份测试字节，未做清理式改动。"
+    "note": "测试二进制保留 2 条无害警告（未用 import、未读字段），为保证原版与候选两臂使用同一份测试字节，未做清理式改动。",
+    "boundary_warning": "输入 64 会使 v+(2^64-64)=2^64 超出 convert_to_u64 单 limb 范围而 panic（静态推导，未实跑）；差值边界测试须先选合法偏移，并区分宿主转换失败与 lookup 拒绝。"
+  },
+
+  "corrections": [
+    {
+      "what": "撤回「G>=2 才能让 Max 正确」",
+      "why": "实测是候选在 G=1/2/4 全部通过，失败的是原版且只在 G>=2；6 列不是候选正确性的必要条件，3 列也不构成不支持的证据。",
+      "fixed_in": "过程文档/07 §4.1、§7"
+    },
+    {
+      "what": "撤回「测试覆盖 9 元素逐位置最大」",
+      "why": "唯一最大值实际只测了位置 0、1、8；源码注释与实际不符。",
+      "fixed_in": "过程文档/07 §4.2"
+    }
+  ],
+
+  "coverage_gaps": {
+    "max_position": "9 元素唯一最大只测位置 0/1/8，缺 2-7",
+    "length": "已测 1/2/3/5/9，缺 4/6/7",
+    "all_negative": "缺；[-5,-1,-3,-16,0] 含 0，不是全负窗口",
+    "columns": "已测 3/6/12，缺 9（G=3）",
+    "rejection_contracts": "缺空输入、非法列数",
+    "numeric_boundary": "缺 Max 差值上界 2^k-10 与上界+1",
+    "pad_to_max": "缺合成图、非负前提失效、额外消费者",
+    "conclusion": "P4-B.2 未完整验收；上述缺口不得归入未开始的 .3/.4"
+  },
+
+  "process_deviation": {
+    "what": "预登记「任一编译非零即停」，实际 B2 失败后修候选、重跑并继续 B3/B4",
+    "status": "未撤销；本地产物不足以核实当时是否另有批准，不由后来成功倒推合规",
+    "also": "测试累计所有失败后统一退出，不是逐用例 fail-fast"
   },
 
   "not_claimed": [
@@ -115,12 +147,17 @@
   ],
 
   "logs": {
-    "baseline": "/root/autodl-tmp/zkml-repro/logs/p4b/b0-baseline-check.log",
-    "max_only": "/root/autodl-tmp/zkml-repro/logs/p4b/b1-max-check.log",
-    "model": "/root/autodl-tmp/zkml-repro/logs/p4b/b2-model-check.log",
-    "pad": "/root/autodl-tmp/zkml-repro/logs/p4b/b3-pad-check.log",
-    "max_test_candidate": "/root/autodl-tmp/zkml-repro/logs/p4b/b4-max-test.log",
-    "max_test_original": "/root/autodl-tmp/zkml-repro/logs/p4b/b4-max-test-ORIGINAL.log"
+    "remote_dir": "/root/autodl-tmp/zkml-repro/logs/p4b/",
+    "local_archive_dir": "logs/p4b/",
+    "files_sha256_prefix": {
+      "b0-baseline-check.log": "9ba33363a4e40980",
+      "b1-max-check.log": "1b7cf0da5a052f41",
+      "b2-model-check.log": "9cb9f96d436d400e",
+      "b3-pad-check.log": "46c44437bfe2aa8e",
+      "b4-max-test.log": "3e2878bfda7201f8",
+      "b4-max-test-ORIGINAL.log": "aae74240cf9f1119"
+    },
+    "note": "2026-11-14 23:55 已回取到本地并登记摘要；本次回取未重跑任何命令，日志内容是当时远端输出。"
   },
 
   "backup": "/root/autodl-tmp/zkml-repro/tmp/src-before-p4b-20261114232625.tgz (26653362 B)"
