@@ -1,0 +1,222 @@
+--- a/src/model.rs
++++ b/src/model.rs
+@@ -89,9 +89,11 @@
+   pub bits_per_elem: usize,
+   pub inp_idxes: Vec<i64>,
+   pub num_random: i64,
+-  /// P4-A v2：从 msgpack 算出的"被引用 tensor ID"集合，供 tensor_map_to_vec
+-  /// 判定空洞是否合法。只参与加载期检查，不参与布局，也不改变电路语义。
+-  pub referenced_tensor_ids: BTreeSet<i64>,
++  /// P4-A v4：初始 map 中**必须已有**的 tensor ID 集合，供 tensor_map_to_vec
++  /// 判定空洞是否合法。等于「被引用 − 任意层产出」，因此未来层的输出不会
++  /// 出现在这里，稀疏空洞合法。config-only 模式下为空集。
++  /// 只参与加载期检查，不参与布局，也不改变电路语义。
++  pub required_initial_ids: BTreeSet<i64>,
+ }
+ 
+ #[derive(Clone, Debug)]
+@@ -146,6 +148,13 @@
+     &self,
+     tensor_map: &BTreeMap<i64, Array<CellRc<F>, IxDyn>>,
+   ) -> Result<Vec<AssignedTensor<F>>, Error> {
++    // P4-A v4：config-only 验证请求里 converter 会清空 config.tensors，
++    // 落到这里就是空表。此时既没有 smallest_tensor 可退化、也没有真实张量可赋值，
++    // 直接返回空 Vec，由调用方按"无 witness"处理。
++    // 这是 v2 破坏瘦配置入口的直接原因之一：空表上 .unwrap() 必 panic。
++    if tensor_map.is_empty() {
++      return Ok(vec![]);
++    }
+     let smallest_tensor = tensor_map
+       .iter()
+       .min_by_key(|(_, tensor)| tensor.len())
+@@ -162,11 +171,12 @@
+       match tensor_map.get(&i) {
+         Some(tensor) => tensors.push(tensor.clone()),
+         None => {
+-          // P4-A v2 契约（M7）：这个 Vec 是按 tensor ID 索引的，所以空洞必须占位以
+-          // 保持长度；但**被引用**的 ID 落空说明依赖清理漏改，必须硬失败，不能
++          // P4-A v4 契约（M7）：这个 Vec 是按 tensor ID 索引的，所以空洞必须占位以
++          // 保持长度；但**初始必需**的 ID 落空说明依赖清理漏改，必须硬失败，不能
+           // 静默给一个 smallest_tensor（形状可能恰好对得上，从而掩盖错误）。
+-          // "未被引用"的判定来自 M4 在加载期算出的 referenced_tensor_ids。
+-          if self.referenced_tensor_ids.contains(&i) {
++          // "初始必需"= 被引用 − 任意层产出（M4）。未来层输出的空洞不在此列，
++          // 它们本来就是合法空槽，会被执行到的层填上。
++          if self.required_initial_ids.contains(&i) {
+             panic!(
+               "tensor {} 被引用但未被赋值（tensor_map 里没有这个键）；\
+                禁止用 smallest_tensor 静默填充",
+@@ -504,34 +514,87 @@
+       }
+     };
+ 
+-    // P4-A v2 契约（M4）：稀疏 tensor ID + 逐层可用性（加载期校验）。
+-    // 原实现（以及 v1 的 N4）要求 tensor_map 含 0..=max_key 的全部键，这有两个问题：
+-    //   1) "删掉元数据张量、保留原 ID"本来就会留下合法空洞，不是缺依赖；
+-    //   2) 尚未执行到的层的输出本来就不该作为初始张量存在。
+-    // 因此改成显式的稀疏表示：初始可用 = 初始张量 ∪ 模型输入，然后按层推进。
++    // P4-A v4 契约（M4）：三段生命周期 + 两种加载模式。
++    //
++    // v2/v3 把这些集合混成一个 `referenced_tensor_ids`，造成两个后果：
++    //   1) 未来层的输出被要求"在 DAG 前已赋值"——初始真实 ID {0,2}、
++    //      L0 输入 0 输出 1 的合法图，会在转 Vec 的空洞 1 处提前 panic；
++    //   2) config-only 验证（converter 清空 tensors）被当成"权重缺失"拒绝。
++    //
++    // 本版明确三段：
++    //   initial          = 初始张量 ∪ 模型输入        （DAG 前真实存在）
++    //   produced         = 各层声明产出              （按层推进，含尚未执行的）
++    //   required_initial = 被引用 − produced         （只有它必须在初始 map 里）
++    // 模式：
++    //   FullWitness = config.tensors 非空：再额外逐层核对"输入此刻可用"
++    //   ConfigOnly  = config.tensors 为空：权重/输入都不在请求里，只做结构检查
++    #[derive(Clone, Copy, PartialEq, Eq)]
++    enum LoadMode {
++      FullWitness,
++      ConfigOnly,
++    }
++    let load_mode = if config.tensors.is_empty() {
++      LoadMode::ConfigOnly
++    } else {
++      LoadMode::FullWitness
++    };
++
+     let initial_ids: BTreeSet<i64> = config
+       .tensors
+       .iter()
+       .map(|t| t.idx)
+       .chain(config.inp_idxes.iter().copied())
+       .collect();
+-    let mut available_ids: BTreeSet<i64> = initial_ids.clone();
+-    let mut produced_ids: BTreeSet<i64> = BTreeSet::new();
++
++    // producer 表：同一 ID 被两层产出是结构性错误，两种模式都可判。
++    let mut producer: BTreeMap<i64, usize> = BTreeMap::new();
+     for (layer_idx, layer) in config.layers.iter().enumerate() {
+-      for idx in layer.inp_idxes.iter() {
+-        if !available_ids.contains(idx) {
++      for idx in layer.out_idxes.iter() {
++        if let Some(prev) = producer.insert(*idx, layer_idx) {
+           panic!(
+-            "layer {} 的输入 tensor {} 既不在初始张量、也没有更早的层产出；\
+-             若这是删元数据张量导致的，说明还有层的 inp_idxes 没同步",
+-            layer_idx, idx
++            "tensor {} 被 layer {} 和 layer {} 重复产出；DAG 语义要求单一定义",
++            idx, prev, layer_idx
+           );
+         }
+       }
+-      for idx in layer.out_idxes.iter() {
+-        available_ids.insert(*idx);
+-        produced_ids.insert(*idx);
++    }
++
++    // 结构检查 1：不许引用"自身或更晚的层"才产出的 ID。
++    // 这条只依赖拓扑，与权重是否在请求里无关，两种模式都执行。
++    for (layer_idx, layer) in config.layers.iter().enumerate() {
++      for idx in layer.inp_idxes.iter() {
++        if let Some(p) = producer.get(idx) {
++          if *p >= layer_idx {
++            panic!(
++              "layer {} 的输入 tensor {} 由 layer {} 产出；\
++               不允许引用自身或未来层的输出",
++              layer_idx, idx, p
++            );
++          }
++        }
++      }
++    }
++
++    // 数据检查（仅 FullWitness）：逐层核对输入此刻确实可用。
++    // config-only 下权重与输入本来就缺席，不能拿它当"缺依赖"。
++    if load_mode == LoadMode::FullWitness {
++      let mut available_ids: BTreeSet<i64> = initial_ids.clone();
++      for (layer_idx, layer) in config.layers.iter().enumerate() {
++        for idx in layer.inp_idxes.iter() {
++          if !available_ids.contains(idx) {
++            panic!(
++              "layer {} 的输入 tensor {} 既不在初始张量、也没有更早的层产出；\
++               若这是删元数据张量导致的，说明还有层的 inp_idxes 没同步",
++              layer_idx, idx
++            );
++          }
++        }
++        for idx in layer.out_idxes.iter() {
++          available_ids.insert(*idx);
++        }
+       }
+     }
++
+     let mut referenced_ids: BTreeSet<i64> = BTreeSet::new();
+     referenced_ids.extend(config.inp_idxes.iter().copied());
+     for layer in config.layers.iter() {
+@@ -548,15 +611,57 @@
+         referenced_ids.extend(group.iter().copied());
+       }
+     }
+-    for idx in referenced_ids.iter() {
+-      if !initial_ids.contains(idx) && !produced_ids.contains(idx) {
++
++    // 结构检查 2：最终输出必须是模型输入或某层产出。
++    for idx in config.out_idxes.iter() {
++      if !initial_ids.contains(idx) && !producer.contains_key(idx) {
+         panic!(
+-          "tensor {} 被引用，但既不在初始张量、也没有任何层产出",
++          "最终输出 tensor {} 既不是模型输入、也没有任何层产出",
+           idx
+         );
+       }
+     }
+-    let referenced_tensor_ids = referenced_ids;
++
++    // 结构检查 3：commit_before 在 DAG 前读取，只能绑定初始张量；
++    //             commit_after 在 DAG 后读取，可引用任意层产出。
++    if let Some(groups) = config.commit_before.as_ref() {
++      for group in groups.iter() {
++        for idx in group.iter() {
++          if !initial_ids.contains(idx) {
++            panic!(
++              "commit_before 引用了 tensor {}，它在 DAG 前并不存在；\
++               commit_before 只能绑定初始张量或模型输入",
++              idx
++            );
++          }
++        }
++      }
++    }
++    if let Some(groups) = config.commit_after.as_ref() {
++      for group in groups.iter() {
++        for idx in group.iter() {
++          if !initial_ids.contains(idx) && !producer.contains_key(idx) {
++            panic!(
++              "commit_after 引用了 tensor {}，它既不是初始张量、也没有任何层产出",
++              idx
++            );
++          }
++        }
++      }
++    }
++
++    // 只有"被引用且没有任何层产出"的 ID 才必须在初始 map 里。
++    // 未来层的输出不在其中，所以稀疏空洞合法。
++    // config-only：权重与输入都不在请求里，绝不要求它们出现在初始 map。
++    let required_initial_ids: BTreeSet<i64> = if load_mode == LoadMode::FullWitness {
++      referenced_ids
++        .iter()
++        .copied()
++        .filter(|idx| !producer.contains_key(idx))
++        .collect()
++    } else {
++      BTreeSet::new()
++    };
+ 
+     // The input lookup is always used
+     used_gadgets.insert(GadgetType::InputLookup);
+@@ -648,7 +753,7 @@
+       k: config.k as usize,
+       bits_per_elem: config.bits_per_elem.unwrap_or(config.k) as usize,
+       inp_idxes: config.inp_idxes.clone(),
+-      referenced_tensor_ids,
++      required_initial_ids,
+       commit_after: config.commit_after.unwrap_or(vec![]),
+       commit_before: config.commit_before.unwrap_or(vec![]),
+       num_random: config.num_random.unwrap_or(0),

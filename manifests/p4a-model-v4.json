@@ -1,0 +1,86 @@
+{
+  "batch": "P4-A 定向补正（第 1 轮）",
+  "title": "model 侧：三段生命周期 + config-only 双模式 + commit 判据",
+  "date": "2026-11-14",
+  "authorization": "plan.md §2.9.3 / §2.10.3：先申请 P4-A 定向补正，优先第 2/3 项与第 6 项。本批只做 model 侧（第 2、3、4a 条），converter 侧（4b、5、6）未做。",
+  "status": "static_only",
+  "status_note": "**未编译、未运行**。本批只产出候选、生成器与门禁；cargo check 需另行许可（plan §2.9.3 明确新候选编译要重新明确许可）。",
+
+  "addressed": [
+    {
+      "plan_item": "§2.9.2 第 2 条：把未来会引用误当成 DAG 前必须已赋值",
+      "fix": "三段生命周期分开：initial = 初始张量 ∪ 模型输入；produced = 各层 out_idxes；required_initial = 被引用 − produced。只有 required_initial 会在 tensor_map_to_vec 的空洞处触发硬失败，未来层输出的空洞是合法空槽。",
+      "evidence": "v2/v3 的 referenced_tensor_ids 直接用于空洞判定，且含 out_idxes/commit_after 等未来集合；v4 改为过滤掉所有 producer 键。"
+    },
+    {
+      "plan_item": "§2.9.2 第 3 条：瘦配置 verifier 兼容性回退",
+      "fix": "引入 LoadMode：config.tensors 为空判为 ConfigOnly，只做结构检查（重复产出、未来引用、最终输出可达、commit 判据），不要求权重/输入出现在初始 map，required_initial 置空；tensor_map_to_vec 对空表直接返回空 Vec，不再 .unwrap() panic。",
+      "residual": "模式由 tensors.is_empty() 推断，不是显式参数；若将来出现\"空权重但要求完整校验\"的调用，需要改成显式入参。这是有意的折中，避免改动 verify_circuit 的现有调用签名。"
+    },
+    {
+      "plan_item": "§2.9.2 第 4 条（model 半）：before/after 判据",
+      "fix": "commit_before 只允许引用 initial（DAG 前真实存在）；commit_after 允许 initial ∪ producer。两者分别报错，不再共用一个判据。",
+      "residual": "**第 4 条的 converter 半（PADV2 观察集合应包含整图 commit_after）未做**，仍待补。"
+    }
+  ],
+
+  "not_addressed": [
+    "§2.9.2 第 4 条 converter 半：_validate_padv2_subgraph 只查最后层公开输出/消费者，commit_after 仍取整图 output_details",
+    "§2.9.2 第 5 条：元数据按原始位置过滤（当前仍按 ID）、普通 PAD/MEAN 的静态常量保证",
+    "§2.9.2 第 6 条：舍入 half-away 的二次舍入反例（0.5−2^-54、2^52+1）、CUSTOM float32 提前乘 scale"
+  ],
+
+  "artifacts": {
+    "patches/model_numeric_contract_v4.rs": "cc1316a4c6a1f44b",
+    "patches/model_numeric_contract_v4.diff": "d3fbabc929343429",
+    "scripts/p4a_make_model_patch_v4.py": "fc4619ca3e53cee8",
+    "base_v3": "19008b73701a7256",
+    "note": "v4.diff 是 v3→v4 增量（222 行），不是从 pristine 直接可用。"
+  },
+
+  "chain_verification": {
+    "method": "在 /tmp 里从 pristine model.rs 依次 patch v2 / v3 / v4，再与 v4 文件逐字节比较",
+    "pristine_sha256_prefix": "05d75b45c32de006",
+    "result": "PASS —— 链末 tr -d '\\r' 后与 patches/model_numeric_contract_v4.rs 完全一致",
+    "note": "这证明补丁链闭合，但不证明 Rust 可编译，也不证明语义正确。"
+  },
+
+  "generator_gate": {
+    "script": "scripts/p4a_make_model_patch_v4.py",
+    "checks": [
+      "LoadMode 枚举存在",
+      "ConfigOnly 分支存在",
+      "required_initial_ids 字段存在",
+      "旧字段声明与使用点已清零（注释提及不算）",
+      "tensor_map_to_vec 有空表早返回",
+      "producer 表存在",
+      "未来引用检查文案存在",
+      "commit_before / commit_after 两条限制文案存在",
+      "required_initial 过滤表达式正确",
+      "剥离注释与字符串后的 () [] {} 配平"
+    ],
+    "result": "10/10 OK，括号配平 [0,0,0]"
+  },
+
+  "self_caught_errors": [
+    {
+      "what": "首版 v4 里 .filter(|idx| !producer.contains_key(*idx)) 类型不对",
+      "why": "iter().copied().filter() 的闭包参数是 &i64，contains_key 正好要 &i64；再解引用就变成 i64",
+      "fix": "改为 contains_key(idx)",
+      "note": "这是生成器门禁之外的静态自查，随后被同步进门禁断言"
+    }
+  ],
+
+  "not_claimed": [
+    "未编译：类型/借用/生命周期是否通过，只有 cargo check 能回答。",
+    "未运行：没有构造 {0,2}→L0 产 1 的稀疏正例，也没有跑 config-only 回归。",
+    "不构成 P4-A 验收：第 4b/5/6 条未做。",
+    "LoadMode 是推断而非显式契约，属已知设计折中。"
+  ],
+
+  "next": [
+    "本批候选若要编译，需单独许可（建议 --locked 复用现有缓存，缺依赖即停）。",
+    "converter 侧第 4b/5/6 条另行补正。",
+    "B.2 剩余覆盖（位置 2–7、长度 4/6/7、全负、9 列、空输入/非法列数、差值边界、Pad→Max）待 v4 验收后申请。"
+  ]
+}
