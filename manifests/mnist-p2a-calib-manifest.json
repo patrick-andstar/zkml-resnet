@@ -1,0 +1,222 @@
+{
+  "manifest_version": 2,
+  "created_utc": "2026-11-14T12:20:00Z",
+  "stage": "P1-P2A",
+  "supersedes_note": "在 mnist-p2-manifest.json 基础上追加 P2A 校准结果。P2 的 legacy 测量原样保留在 measurement_method=legacy 段，不与校准值混用。",
+  "note": "SRS 与 vkey/proof/public_vals 必须成套使用；换 SRS 即作废。P2A 未改动任何规范产物（摘要已复核一致）。",
+  "host": {
+    "endpoint": "<redacted-host>:<port>",
+    "host_key_sha256": "EPstg8jNN+u3Bs1JyQOqlBeq3w+a4VynoJAe48YnIV0",
+    "os": "Ubuntu 22.04.4 LTS",
+    "cpu": "Intel Xeon Gold 6430, cpuset 0-127",
+    "cpu_max": "1600000 100000 (equivalent 16 CPU)",
+    "memory_max_bytes": 128849018880,
+    "swap_max_bytes": 0,
+    "data_disk_gb": 50,
+    "gpu": "RTX 4090 24564 MiB (unused: locked Halo2 rev has no GPU backend)",
+    "sharing": "shared host; loadavg during P2A batches ~10; not an exclusive CPU"
+  },
+  "toolchain": {
+    "channel": "nightly-2026-11-01",
+    "rustc": "1.101.0-nightly (f9ceb4a4d 2026-10-31)",
+    "cargo": "1.101.0-nightly (31d3246e0 2026-10-27)",
+    "rustup_home": "/root/autodl-tmp/zkml-repro/env/rustup",
+    "cargo_home": "/root/autodl-tmp/zkml-repro/env/cargo",
+    "cargo_target_dir": "/root/autodl-tmp/zkml-repro/target",
+    "build_note": "必须从 $REPRO/src 运行 cargo，rust-toolchain.toml 在那里；CARGO_TARGET_DIR 固定到 $REPRO/target，避免第二个 target 目录",
+    "deviation": "论文时代无锁定日期 toolchain；因 2026 年依赖要求 edition2024 而选用现代 nightly，属复现偏离"
+  },
+  "source": {
+    "archive_sha256": "e343e67032a88bfc0c002bfd0eba944b5cc04a021569d0db75525ff225162a2b",
+    "file_count": 125,
+    "cargo_lock_sha256": "7d00bc54b3637d9daf7966b669e672ca1c642845d6d77d2d8a155112b2c1e205",
+    "cargo_lock_packages": 81,
+    "pinned": {
+      "halo2": "git rev 17e9765c199670534c0299c96128d0464a188d0b",
+      "halo2_proofs": "git rev 17e9765c199670534c0299c96128d0464a188d0b",
+      "halo2_gadgets": "git rev 17e9765c199670534c0299c96128d0464a188d0b",
+      "halo2curves": "git tag 0.3.2 (#9f5c50810bbefe779ee5cf1d852b2fe85dc35d5e)"
+    },
+    "unmodified_upstream_binary": {
+      "path": "target/release/verify_circuit",
+      "sha256": "b05793ea1df1377e9afb3ba2b5007fa67319711e1a93cf65a0fdc1829e926ebc",
+      "source": "src/bin/verify_circuit.rs (未修改)"
+    }
+  },
+  "measurement_method": {
+    "version": "outer-v2.1/wait4",
+    "outer": "scripts/runwrap.py",
+    "selftest": "scripts/p2a_selftest.py",
+    "selftest_result": {
+      "all_pass": true,
+      "fast_ms": 1.786,
+      "controlled_s": 0.3027,
+      "exit7_code": 7,
+      "signal": 15,
+      "signal_exit_code": 143,
+      "fast_repeat_ms": [1.694, 1.703, 1.695, 1.581, 1.725, 1.599, 1.67, 1.587, 1.716, 1.647],
+      "fast_spread_ms": 0.144,
+      "affinity_observed": ["0-127", "3"],
+      "affinity_last": "3"
+    },
+    "timer_boundary": "t0 紧邻 Popen；唯一回收路径 os.wait4；t1 紧跟 wait4；监控线程 join 在 t1 之后；日志在 t0 前打开",
+    "included_in_wall": "exec + 动态链接 + 全部工作 + 程序输出 + 析构 + 进程退出 + 少量调度噪声",
+    "excluded": "量具自身启动、日志文件打开、JSON 落盘",
+    "exit_status": "signal=WTERMSIG；code=128+signal；raw wait status 一并保留；不把任意非零当成功/失败判据",
+    "affinity_evidence": "外层持续采样目标 PID 的 /proc/<pid>/status，记末次 Cpus_allowed_list（首样本会早于 taskset，已不采用）；插桩版另有 self-report",
+    "rss_semantics": "wait4 的 ru_maxrss × 1024，仅被回收子进程自身峰值，不含子孙并发内存",
+    "p95_definition": "升序样本零基索引 (n-1)*0.95 线性插值；n=10 只是样本描述，非尾延迟保证"
+  },
+  "p2a_binaries": {
+    "verify_profile2": {
+      "path": "target/release/verify_profile2",
+      "sha256": "d1a5fb28002601d659573e6d92261fdc8f98c16df9b3d80eacb62c031c8d1735",
+      "patch": "patches/verify_profile2.rs",
+      "patch_sha256": "52e37450925afbe1f0ad535263d85d1451357b03ecb25bdefcd583767ab512d7",
+      "built_from_identical_copy": true,
+      "scope": "只做插桩（分段计时/读追踪）与参数读取方式切换；同一 ParamsKZG::read、同一 SerdeFormat::RawBytes、同一 transcript、同一 verify_proof、同一检查；缺参直接 panic 不 fallback setup"
+    },
+    "scripts_sha256": {
+      "scripts/runwrap.py": "822ce7e8d107527c1a05c48efa283c2b823d8b7c7bbd042256709b1f3697bb71",
+      "scripts/p2a_selftest.py": "3f28cd902cf0c5b510373d40bb902a8f74299e872490c69c319a80d1693699e2",
+      "scripts/p2a_abc.py": "211b30c8018a9db94f95bb569c5a9405ab552640d777e3d3ab7ec0a7ea8e0a2e",
+      "scripts/p2a_neg.py": "6d309f0f0239b65bfd732b87f11bafbde092343d1db0ee8a529dda99ff40f551",
+      "scripts/env.sh": "12e0f6108d3966774cb5464b15bb41b547756e38c2105b9b3a0114229cad71f2",
+      "scripts/build_p2a.sh": "18a71dda9da20bc8d8ea63d0b5108b745faa6e077832da57822159a337e72043"
+    }
+  },
+  "mnist": {
+    "k": 15,
+    "num_cols": 7,
+    "scale": 512,
+    "srs_namespace": "/root/autodl-tmp/zkml-repro/srs/mnist-initial",
+    "artifacts": {
+      "15.params": {"bytes": 4194564, "sha256": "1e9ef6f46a33d2c60f6e4275f16ae936475b52b4dfbf056235daffa86306c95d"},
+      "vkey": {"bytes": 25608, "sha256": "eb095671d3365d615f5cdf7000bad91ba606dc14b02c5d4b09d2e6f5cca5aafa"},
+      "pkey": {"bytes": 113272044, "sha256": "47aea2dbc09fb0276fd246ffb2322da4c79feb7cde0347a829e479f69362cbbc"},
+      "proof": {"bytes": 3360, "sha256": "d700fd154a6e23783cb8da09e11b94a9efcd942861127f8a38abb3b310e35623"},
+      "public_vals": {"bytes": 320, "sha256": "37987fed3d53d98d07a4da9dd4ad9e9691b063673a532b8594d2fab4200a9b22"}
+    },
+    "inputs": {
+      "config.msgpack": "dcf61f7d3cdc379b82c688253b4eb3420e8c58abf1eda46f26f79a04a337847f",
+      "model.msgpack": "9d00a1a377339448f55fd5666f38e376553654ffb884210597fdd615bf2967b4",
+      "inp.msgpack": "9eb8082aa546e2e6002015524539d2c4d976639ea13aab985edd11bc212abe25"
+    },
+    "artifacts_reverified_after_p2a": true,
+    "artifacts_modified_by_p2a": false
+  },
+  "p2a_read_comparison": {
+    "design": {
+      "groups": {
+        "O": "target/release/verify_circuit （未修改上游 binary）",
+        "A": "verify_profile2 --read-mode file",
+        "B": "verify_profile2 --read-mode bufreader (1 MiB)",
+        "C": "verify_profile2 --read-mode memory (fs::read + Cursor)"
+      },
+      "n_per_group": 10,
+      "interleaving": "轮次轮转，防止某组固定第一",
+      "cpu_affinity": "taskset -c 0",
+      "rayon_num_threads": 1,
+      "cwd": "每次样本独立目录",
+      "ogroup_srs_safety": "O 组 cwd 的 params_kzg 指向 runs/p2a-calib1/orig-srs/15.params 副本（摘要与规范 SRS 相同），防止上游 get_kzg_params 缺参时静默生成并写回规范 SRS",
+      "run_root": "runs/p2a-calib1/abc",
+      "other_batches": ["runs/p2a-calib1/abc-b1（同条件重复，结论一致）", "runs/p2a-calib1/abc-pilot（绑核采样修复前的首批，仅留档）"]
+    },
+    "wall_ms": {
+      "O": {"n": 10, "min": 207.446, "median": 213.360, "p95": 216.472, "max": 216.679, "mean": 212.975, "stdev": 2.666,
+            "values": [216.679, 210.518, 213.600, 212.775, 213.726, 216.218, 213.856, 211.815, 207.446, 213.119]},
+      "A": {"n": 10, "min": 207.625, "median": 211.747, "p95": 217.546, "max": 220.722, "mean": 211.981, "stdev": 3.681,
+            "values": [211.886, 207.625, 212.169, 211.209, 213.664, 211.608, 208.823, 208.682, 213.421, 220.722]},
+      "B": {"n": 10, "min": 27.045, "median": 28.467, "p95": 32.483, "max": 35.287, "mean": 29.001, "stdev": 2.285,
+            "values": [27.045, 28.419, 28.169, 28.659, 28.515, 27.708, 28.926, 28.225, 29.057, 35.287]},
+      "C": {"n": 10, "min": 27.690, "median": 29.883, "p95": 30.656, "max": 30.774, "mean": 29.647, "stdev": 0.980,
+            "values": [30.173, 30.774, 27.690, 29.559, 29.150, 29.594, 30.224, 30.512, 30.345, 28.450]}
+    },
+    "ratios": {
+      "A_over_B": 7.44,
+      "O_over_B": 7.50,
+      "C_over_B": 1.05,
+      "params_read_A_over_B": 30.4,
+      "note": "比值由同批次中位数得出；单机共享宿主，不作为跨环境常数"
+    },
+    "inner_stage_median_ms": {
+      "A_file": {"config": 0.072, "circuit": 0.036, "params_open": 0.003, "params_preload": null, "params_read": 187.766, "vk": 7.298, "proof": 0.018, "public_vals": 0.008, "init": 0.000, "core": 8.883, "cleanup": 0.386, "total": 204.885, "residual": 0.174},
+      "B_bufreader": {"config": 0.063, "circuit": 0.035, "params_open": 0.003, "params_preload": null, "params_read": 6.183, "vk": 6.786, "proof": 0.014, "public_vals": 0.008, "init": 0.000, "core": 8.854, "cleanup": 0.335, "total": 22.447, "residual": 0.142},
+      "C_memory": {"config": 0.118, "circuit": 0.057, "params_open": 0.005, "params_preload": 2.658, "params_read": 3.374, "vk": 7.441, "proof": 0.014, "public_vals": 0.008, "init": 0.000, "core": 8.843, "cleanup": 0.718, "total": 23.458, "residual": 0.205},
+      "O_upstream": "不可获取：上游 binary 未插桩，不填插值"
+    },
+    "outer_minus_inner_ms": {"A": 6.862, "B": 6.020, "C": 6.425},
+    "affinity_and_threads": {
+      "child_cpus_allowed_last": {"O": "0", "A": "0", "B": "0", "C": "0"},
+      "instrumented_self_report": {"A": "affinity 0→0, threads_at_end=2", "B": "affinity 0→0, threads_at_end=2", "C": "affinity 0→0, threads_at_end=2"},
+      "child_threads_max_outer": 2,
+      "ru_maxrss_median_kb": {"O": 12256, "A": 12248, "B": 12266, "C": 15922},
+      "note": "O 组的线程池大小取不到，只有绑核由 /proc 佐证；不拿父进程 affinity 替代"
+    }
+  },
+  "p2a_negative_evidence": {
+    "report": "runs/p2a-calib1/neg_report.json",
+    "stage_rule": "加载失败(panic) / 解码失败(消费 < 3360 B，错误名不可靠) / 校验拒绝(105 次读、3360 B 全部消费完)",
+    "proof_read_baseline": {"n_reads": 105, "element_bytes": 32, "bytes_consumed": 3360},
+    "element_classification": {
+      "method": "把第 i 个 32 B 元素替换为 32 个零字节（域元素 0 的合法编码），按拒绝发生的阶段判定",
+      "curve_points": {"count": 37, "indices": "0-35, 103", "evidence": "在该元素处报 invalid point encoding，读入在第 i+1 个元素停止"},
+      "field_elements": {"count": 68, "indices": "36-102, 104", "evidence": "接受零字节，105 次读/3360 B 全部消费后仍被拒"},
+      "ambiguous": [],
+      "why_valid": "零字节已被 37 次拒绝证明不是合法点编码；transcript 只有 read_point 与 read_scalar 两条路径，故接受零字节者必走 read_scalar",
+      "caveat": "本依赖集 G1 compressed 编码同样是 32 B，因此长度不能用来区分点与标量；第一版把 32 B 标成 scalar 的说法已删除"
+    },
+    "cases": [
+      {"case": "positive_control", "exit": 0, "read": "105/3360", "stage": "accepted", "result": "Ok", "modes": ["file", "bufreader", "memory"]},
+      {"case": "public_value_other_canonical_element", "exit": 2, "read": "105/3360", "stage": "verification_error", "result": "ConstraintSystemFailure", "modes": ["file", "bufreader", "memory"]},
+      {"case": "public_value_noncanonical", "exit": 101, "read": null, "stage": "load_error_panic", "result": "public value decode panic", "modes": ["file", "bufreader", "memory"]},
+      {"case": "proof_point_slot_valid_wrong_point", "offset": 0, "exit": 2, "read": "105/3360", "stage": "verification_error", "result": "ConstraintSystemFailure", "modes": ["file", "bufreader", "memory"], "detail": "元素 0 换成元素 1 的 32 字节，仍是合法点编码"},
+      {"case": "proof_point_slot_invalid_encoding", "offset": 0, "exit": 2, "read": "1/32", "stage": "decode_error", "result": "Transcript 'invalid point encoding in proof'", "modes": ["file", "bufreader", "memory"]},
+      {"case": "proof_scalar_slot_other_canonical_value", "offset": 1152, "exit": 2, "read": "105/3360", "stage": "verification_error", "result": "ConstraintSystemFailure", "modes": ["file", "bufreader", "memory"], "detail": "元素 36 低位翻转，仍是合法规范域元素"},
+      {"case": "proof_truncated_by_32_bytes", "exit": 2, "read": "105 次尝试 / 3328 B", "stage": "decode_error", "result": "Opening", "modes": ["file", "bufreader", "memory"], "detail": "SHPLONK 把尾部点读取失败映射成 Opening，所以错误名不能单独用来分期"},
+      {"case": "srs_missing_fails_fast", "exit": 101, "stage": "load_error_panic", "no_new_srs_written": true, "dir_after": []},
+      {"case": "srs_truncated_load_error", "exit": 101, "stage": "load_error_panic", "truncated_bytes": 4096, "canonical_srs_unchanged": true},
+      {"case": "vkey_truncated_load_error", "exit": 101, "stage": "load_error_panic", "truncated_bytes": 1024, "canonical_vkey_unchanged": true}
+    ],
+    "not_claimed": [
+      "这不是可靠性(soundness)证明，只是单个诚实输入的少量负例",
+      "不声称完整的 proof 布局语义，只报告解码器判定出的 37 点 / 68 域元素",
+      "不据此推断目标 ResNet-18 的任何性质"
+    ]
+  },
+  "corrected_attribution": {
+    "old_claim": "SRS 段 185.5 ms 几乎全是逐点解码；读 4 MB 只要 3 ms，所以瓶颈不在 I/O",
+    "measured": "同一 ParamsKZG::read、同一 SerdeFormat，换成 1 MiB BufReader 后 187.8 → 6.18 ms；慢的是 524288 次 8 B read_exact（每坐标 4 次 × 每 G1 点 8 次 × 2×2^15 点）",
+    "remaining_decode_cost_ms_upper_bound": 6.183,
+    "legacy_outer_gap_ms": 20.7,
+    "calibrated_outer_gap_ms": [6.862, 6.020, 6.425],
+    "legacy_gap_note": "旧 20.7 ms 里约 14 ms 是 20 ms 轮询的检测滞后，不能算启动/退出"
+  },
+  "estimates_not_measured": {
+    "basis": "以 B 组 ParamsKZG::read = 6.183 ms（k=15，2×2^15 点）按点数线性放大；未实测任何 k>15",
+    "params_read": {"k20": "~198 ms", "k24": "~3.2 s", "k28": "~51 s"},
+    "superseded_legacy_estimate": {"k20": "~5.9 s", "k24": "~95 s", "k28": "~25 min", "status": "作废：基数 185.5 ms 归因错误"},
+    "file_size": {"k20": "134 MB", "k24": "2.1 GB", "k28": "34.4 GB"},
+    "caveat": "k>=24 时几十 GB 的文件读取本身会成为新下限，上表未计入；既不能据此宣布目标可达，也不能宣布不可达"
+  },
+  "legacy_measurements_kept": {
+    "source_manifest": "manifests/mnist-p2-manifest.json",
+    "method": "scripts/measure.py（20 ms 轮询版本）",
+    "status": "仅作历史对照，不得用于性能结论",
+    "verify_original_1cpu_wall_median_ms": 222.9,
+    "verify_profile_1cpu": {"wall_median_ms": 222.9, "params_median_ms": 185.5, "vk_median_ms": 7.2, "core_median_ms": 8.8, "residual_ms": 20.7},
+    "artifacts_still_valid": true
+  },
+  "p2b_decision_input": {
+    "fact": "参数加载经缓冲后只剩 6.183 ms（k=15）",
+    "implication": "“验证方专用轻量参数（只读 g2/s_g2）”的理论收益上限从 185 ms 降到 <=6.2 ms；性价比大幅下降，但非零，且随 k 增长",
+    "not_decided_here": true
+  },
+  "open_items": [
+    "未做 16 线程辅助对照（本批非必需）",
+    "单容器共享宿主，未控制温度/NUMA/邻居负载",
+    "每组 10 样本，p95 只是样本描述",
+    "所有 k>15 的规模数字均为估算",
+    "P3（标准 ResNet-18 转换）未开始，需单独确认"
+  ]
+}

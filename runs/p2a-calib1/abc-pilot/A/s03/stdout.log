@@ -1,0 +1,2 @@
+{"read_mode":"file","diag":false,"trace_reads":false,"k":15,"num_cols":7,"proof_bytes":3360,"public_vals":10,"config_ms":0.133,"circuit_ms":0.076,"params_open_ms":0.007,"params_parse_ms":183.963,"params_preload_ms":0.000,"params_ms":183.969,"vk_ms":7.263,"proof_ms":0.018,"public_ms":0.008,"init_ms":0.000,"core_ms":8.897,"cleanup_ms":0.385,"accounted_ms":200.750,"total_ms":200.980,"residual_ms":0.230,"peak_rss_bytes":12029952,"threads_at_end":2,"affinity_start":"0","affinity_end":"0","verify_result":"Ok"}
+Proof verified!

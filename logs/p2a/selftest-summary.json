@@ -1,0 +1,33 @@
+{
+  "fast_ms": 1.786,
+  "fast_pass": true,
+  "controlled_s": 0.3027,
+  "controlled_pass": true,
+  "exit7_code": 7,
+  "exit7_wrapper_rc": 7,
+  "exit7_pass": true,
+  "signal": 15,
+  "signal_exit_code": 143,
+  "signal_pass": true,
+  "fast_repeat_ms": [
+    1.694,
+    1.703,
+    1.695,
+    1.581,
+    1.725,
+    1.599,
+    1.67,
+    1.587,
+    1.716,
+    1.647
+  ],
+  "fast_spread_ms": 0.144,
+  "fast_repeat_pass": true,
+  "affinity_observed": [
+    "0-127",
+    "3"
+  ],
+  "affinity_last": "3",
+  "affinity_pass": true,
+  "all_pass": true
+}

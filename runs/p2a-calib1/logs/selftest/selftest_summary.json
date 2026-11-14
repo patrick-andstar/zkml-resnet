@@ -1,0 +1,27 @@
+{
+  "fast_ms": 1.711,
+  "fast_pass": true,
+  "controlled_s": 0.303,
+  "controlled_pass": true,
+  "exit7_code": 7,
+  "exit7_wrapper_rc": 7,
+  "exit7_pass": true,
+  "signal": 15,
+  "signal_exit_code": 143,
+  "signal_pass": true,
+  "fast_repeat_ms": [
+    1.718,
+    1.795,
+    1.761,
+    1.702,
+    1.815,
+    1.516,
+    1.707,
+    1.786,
+    1.735,
+    1.533
+  ],
+  "fast_spread_ms": 0.299,
+  "fast_repeat_pass": true,
+  "all_pass": true
+}

@@ -1,0 +1,2 @@
+{"read_mode":"bufreader","diag":false,"trace_reads":false,"k":15,"num_cols":7,"proof_bytes":3360,"public_vals":10,"config_ms":0.063,"circuit_ms":0.033,"params_open_ms":0.003,"params_parse_ms":6.275,"params_preload_ms":0.000,"params_ms":6.278,"vk_ms":6.788,"proof_ms":0.015,"public_ms":0.008,"init_ms":0.000,"core_ms":8.816,"cleanup_ms":0.335,"accounted_ms":22.336,"total_ms":22.470,"residual_ms":0.134,"peak_rss_bytes":11997184,"threads_at_end":2,"affinity_start":"0","affinity_end":"0","verify_result":"Ok"}
+Proof verified!
