@@ -1,0 +1,20 @@
+# 构建产物与工具链：体积大、可由 Cargo.toml/Cargo.lock 重建
+/target/
+/src/target/
+/env/
+
+# 证明密钥：108 MiB，超过 GitHub 单文件 100 MiB 上限，可由 SRS 重新 keygen
+runs/*/pkey
+
+# 校准用的 SRS 副本（与 srs/mnist-initial/15.params 同一份，去重）
+runs/p2a-calib1/orig-srs/
+
+# 第三方权重缓存（torchvision 下载，SHA-256 已在文档登记）
+assets/torch-hub/
+
+# 上游仓库自带的临时产物
+*.rlib
+*.rmeta
+
+# 运行目录里指向 srs/ 的绝对路径软链，不具备可移植性
+runs/*/params_kzg

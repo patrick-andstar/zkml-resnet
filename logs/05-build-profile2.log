@@ -1,0 +1,40 @@
+warning: using `.clone()` on a double reference, which returns `&AssignedCell<F, F>` instead of cloning the inner type
+   --> src/gadgets/dot_prod.rs:189:77
+    |
+189 |               .op_row_region(&mut region, i, &vec![inp, weights], &vec![zero.clone()])
+    |                                                                             ^^^^^^^^
+    |
+    = note: `#[warn(suspicious_double_ref_op)]` on by default
+
+warning: call to `.clone()` on a reference in this situation does nothing
+  --> src/layers/arithmetic.rs:37:33
+   |
+37 |     let out_shape = inp1.shape().clone();
+   |                                 ^^^^^^^^ help: remove this redundant call
+   |
+   = note: the type `[usize]` does not implement `Clone`, so calling `clone` on `&[usize]` copies the reference, which does not do anything and can be removed
+   = note: `#[warn(noop_method_call)]` on by default
+
+warning: feature `int_roundings` is declared but not used
+ --> src/lib.rs:1:12
+  |
+1 | #![feature(int_roundings)]
+  |            ^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_features)]` (part of `#[warn(unused)]`) on by default
+
+warning: `zkml` (lib) generated 3 warnings (run `cargo fix --lib -p zkml` to apply 1 suggestion)
+   Compiling zkml v0.0.1 (/root/autodl-tmp/zkml-repro/src)
+error[E0596]: cannot borrow `transcript` as mutable, as it is not declared as mutable
+   --> src/bin/verify_profile2.rs:204:49
+    |
+204 |   >(&params, &vk, strategy, &[&[&public_vals]], &mut transcript);
+    |                                                 ^^^^^^^^^^^^^^^ cannot borrow as mutable
+    |
+help: consider changing this to be mutable
+    |
+194 |   let mut transcript = Blake2bRead::<_, _, Challenge255<_>>::init(&proof[..]);
+    |       +++
+
+For more information about this error, try `rustc --explain E0596`.
+error: could not compile `zkml` (bin "verify_profile2") due to 1 previous error

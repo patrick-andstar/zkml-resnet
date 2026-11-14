@@ -1,0 +1,84 @@
+    Updating `rsproxy-sparse` index
+    Updating git repository `https://github.com/privacy-scaling-explorations/halo2`
+From https://github.com/privacy-scaling-explorations/halo2
+ * [new ref]           17e9765c199670534c0299c96128d0464a188d0b -> refs/commit/17e9765c199670534c0299c96128d0464a188d0b
+ * [new tag]           halo2_gadgets-0.1.0 -> halo2_gadgets-0.1.0
+ * [new tag]           halo2_gadgets-0.2.0 -> halo2_gadgets-0.2.0
+ * [new tag]           halo2_proofs-0.1.0  -> halo2_proofs-0.1.0
+ * [new tag]           halo2_proofs-0.2.0  -> halo2_proofs-0.2.0
+ * [new tag]           v2022_02_23         -> v2022_02_23
+ * [new tag]           v2022_03_06         -> v2022_03_06
+ * [new tag]           v2022_05_03         -> v2022_05_03
+ * [new tag]           v2022_05_06         -> v2022_05_06
+ * [new tag]           v2022_05_09         -> v2022_05_09
+ * [new tag]           v2022_06_03         -> v2022_06_03
+ * [new tag]           v2022_08_09         -> v2022_08_09
+ * [new tag]           v2022_08_19         -> v2022_08_19
+ * [new tag]           v2022_09_10         -> v2022_09_10
+ * [new tag]           v2022_10_22         -> v2022_10_22
+ * [new tag]           v2023_01_17         -> v2023_01_17
+ * [new tag]           v2023_01_20         -> v2023_01_20
+ * [new tag]           v2023_02_02         -> v2023_02_02
+    Updating git repository `https://github.com/privacy-scaling-explorations/halo2curves`
+From https://github.com/privacy-scaling-explorations/halo2curves
+ * [new tag]         0.3.2      -> origin/tags/0.3.2
+ * [new tag]         0.3.2      -> 0.3.2
+ * [new tag]         0.2.1      -> 0.2.1
+ * [new tag]         0.3.0      -> 0.3.0
+ * [new tag]         0.3.1      -> 0.3.1
+ * [new tag]         v0.2.0     -> v0.2.0
+     Locking 81 packages to latest compatible versions
+      Adding block-buffer v0.9.0 (latest: v0.12.1)
+      Adding block-padding v0.2.1 (latest: v0.4.2)
+      Adding constant_time_eq v0.4.2 (latest: v0.6.1)
+      Adding cpufeatures v0.2.17 (latest: v0.3.1)
+      Adding digest v0.9.0 (latest: v0.11.3)
+      Adding ff v0.13.1 (latest: v0.14.0)
+      Adding generic-array v0.14.9 (latest: v1.4.5)
+      Adding getrandom v0.2.17 (latest: v0.4.3)
+      Adding group v0.13.0 (latest: v0.14.0)
+      Adding keccak v0.1.6 (latest: v0.2.2)
+      Adding ndarray v0.15.6 (latest: v0.17.2)
+      Adding num-bigint v0.4.8 (latest: v0.5.1)
+      Adding opaque-debug v0.3.1 (latest: v0.4.0)
+      Adding pasta_curves v0.5.2 (latest: v0.6.1)
+      Adding radium v0.7.0 (latest: v1.1.1)
+      Adding rand v0.8.8 (latest: v0.10.3)
+      Adding rand_chacha v0.3.1 (latest: v0.10.0)
+      Adding rand_core v0.6.4 (latest: v0.10.1)
+      Adding riff v1.0.1 (latest: v2.0.0)
+      Adding sha3 v0.9.1 (latest: v0.12.0)
+      Adding spin v0.9.9 (latest: v0.12.3)
+      Adding syn v2.0.119 (latest: v3.0.10)
+      Adding uint v0.9.5 (latest: v0.10.2)
+      Adding wasi v0.11.1+wasi-snapshot-preview1 (latest: v0.14.7+wasi-0.2.4)
+      Adding wyz v0.5.1 (latest: v0.6.1)
+ Downloading crates ...
+  Downloaded itoa v1.0.19 (registry `rsproxy-sparse`)
+  Downloaded once_cell v1.21.4 (registry `rsproxy-sparse`)
+  Downloaded serde_core v1.0.229 (registry `rsproxy-sparse`)
+  Downloaded serde_derive v1.0.229 (registry `rsproxy-sparse`)
+  Downloaded serde_json v1.0.154 (registry `rsproxy-sparse`)
+  Downloaded unicode-ident v1.0.27 (registry `rsproxy-sparse`)
+  Downloaded quote v1.0.47 (registry `rsproxy-sparse`)
+  Downloaded num-integer v0.1.47 (registry `rsproxy-sparse`)
+  Downloaded matrixmultiply v0.3.11 (registry `rsproxy-sparse`)
+  Downloaded zerocopy v0.8.63 (registry `rsproxy-sparse`)
+  Downloaded syn v3.0.10 (registry `rsproxy-sparse`)
+  Downloaded radium v0.7.0 (registry `rsproxy-sparse`)
+  Downloaded uint v0.9.5 (registry `rsproxy-sparse`)
+  Downloaded serde v1.0.229 (registry `rsproxy-sparse`)
+  Downloaded bitvec v1.1.1 (registry `rsproxy-sparse`)
+  Downloaded num-traits v0.2.19 (registry `rsproxy-sparse`)
+  Downloaded constant_time_eq v0.4.2 (registry `rsproxy-sparse`)
+error: failed to download replaced source registry `crates-io`
+
+Caused by:
+  failed to parse manifest at `/root/autodl-tmp/zkml-repro/env/cargo/registry/src/rsproxy.cn-0dccff568467c15b/constant_time_eq-0.4.2/Cargo.toml`
+
+Caused by:
+  feature `edition2024` is required
+
+  The package requires the Cargo feature called `edition2024`, but that feature is not stabilized in this version of Cargo (1.80.0-nightly (b60a15551 2024-04-26)).
+  Consider trying a more recent nightly release.
+  See https://doc.rust-lang.org/nightly/cargo/reference/unstable.html#edition-2024 for more information about the status of this feature.
