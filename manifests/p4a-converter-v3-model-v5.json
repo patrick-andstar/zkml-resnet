@@ -76,7 +76,37 @@
       "method": "pristine src/model.rs → v2 → v3 → v4 → v5，换行归一后比较",
       "result": "PASS（换行归一后逐字节一致）"
     },
-    "compile_status": "**未编译**。v5 改动了 model 代码，按用户要求另立版本，不继承 v4 的编译通过结论；需提交后单独申请编译检查。"
+    "compile_status": "**已通过一次隔离编译检查**（详见 compile_check）。仅此而已：不证明 V4-G1 运行正确，也不证明稀疏图 / config-only / commit 行为正确。",
+    "compile_check": {
+      "when": "2026-11-15T00:25:03+08:00",
+      "command": "cargo check --offline --locked -j 4",
+      "cwd": "/root/autodl-tmp/zkml-repro/src",
+      "attempts": 1,
+      "rc": 0,
+      "cargo_elapsed_s": 0.73,
+      "patch_base": "model v4 cc1316a4c6a1f44b（应用前已在日志首段记录）",
+      "source_combination": {
+        "src/gadgets/max.rs": "970928e8a13520e4",
+        "src/model.rs": "1b0d3232c9a86000",
+        "src/layers/shape/pad.rs": "89fbf3c258ffc7c2"
+      },
+      "did_recheck_crate": true,
+      "did_recheck_evidence": "日志含 `Checking zkml v0.0.1 (...)`，非缓存命中",
+      "warnings_vs_v4": "14 条，与 v4 那次逐条 diff 完全一致，无新增",
+      "log": "logs/p4b/b6-model-v5-check.log",
+      "log_sha256_prefix": "4a8049151f12922b",
+      "recorded_conclusion": "model v5 在上述 Max/model/Pad 源码组合下，通过本次离线锁定依赖的类型与借用检查。",
+      "scope_compliance": {
+        "offline": true,
+        "locked": true,
+        "no_dependency_download": true,
+        "no_lockfile_update": true,
+        "reused_existing_target": true,
+        "no_fix_and_retry": true,
+        "no_rollback_or_overwrite": true,
+        "no_converter_tests_or_prove": true
+      }
+    }
   },
 
   "selftest": {
@@ -95,15 +125,17 @@
   },
 
   "not_claimed": [
-    "v5 未编译：类型/借用是否通过未知，不能继承 v4 的 rc=0。",
+    "编译通过 ≠ V4-G1 正确：只证明类型与借用检查。",
+    "24/24 自检不是 model v5 的行为验证：那是 Python 侧（舍入/缩放/位置过滤/假图观察集合）的自检，含反例复现与源码结构断言，不是 24 个完整转换用例。",
+    "unresolved_commit_ids 是「未核实」的记录，不是存在性证明：before/after 都处理了瘦配置缺实体，但实际承诺组能否被完整模型接受、瘦配置能否正确构造验证对象，留给 B.3。",
     "converter v3 未运行：py_compile 只证明可解析。",
     "4b 的观察集合只在假 graph 上验证过，未与真实 tflite 的 output_details 对账。",
-    "V4-G1 修复后是否与真实 converter 产出的 commit 组兼容，未验证。",
-    "不构成 P4-A 验收；P4-B.2 剩余覆盖与 B.3 模型级回归仍未做。"
+    "不构成 P4-A 验收；B.2 剩余覆盖与 B.3 模型级回归仍未做。"
   ],
 
   "next": [
-    "申请 v5 的隔离编译检查（--offline --locked，一次尝试，失败不修补续跑）。",
-    "随后才是 B.2 剩余覆盖（位置 2–7、长度 4/6/7、全负、9 列、空输入/非法列数、差值边界、Pad→Max）与 B.3 模型级回归。"
+    "v5 已编译通过（见 compile_check）；不再重复申请编译。",
+    "接下来分别确认 B.2 剩余覆盖（位置 2–7、长度 4/6/7、全负、9 列、空输入/非法列数、差值边界、Pad→Max）与 B.3 模型级回归。",
+    "B.2 即使通过，也不能代替稀疏 ID / config-only / commit 兼容性的 B.3 验证。"
   ]
 }
